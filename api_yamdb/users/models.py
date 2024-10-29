@@ -22,6 +22,15 @@ class User(AbstractUser):
         choices=ROLE_CHOICES,
         default='user'
     )
+    email = models.EmailField('email', unique=True)
+    username = models.CharField('username', max_length=150, unique=True)
+
+    class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
+
+    def __str__(self):
+        return self.username
 
     @property
     def is_admin(self):
