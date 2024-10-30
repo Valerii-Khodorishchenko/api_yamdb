@@ -18,12 +18,12 @@ class User(AbstractUser):
     bio = models.TextField('О себе', blank=True)
     role = models.CharField(
         'Роль',
-        max_length=20,
+        max_length=10,
         choices=ROLE_CHOICES,
-        default='user'
+        default=USER
     )
-    email = models.EmailField('email', unique=True)
-    username = models.CharField('username', max_length=150, unique=True)
+    email = models.EmailField('Email', unique=True)
+    username = models.CharField('Username', max_length=150, unique=True)
 
     class Meta:
         verbose_name = 'пользователь'

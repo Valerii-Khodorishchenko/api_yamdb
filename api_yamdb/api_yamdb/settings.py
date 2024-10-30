@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'users',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -126,3 +127,8 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 # Users
 
 AUTH_USER_MODEL = 'users.User'
+
+# Email
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'No-reply <yamdb@no-reply.ru>'
