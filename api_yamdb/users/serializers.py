@@ -75,3 +75,19 @@ class TokenObtainSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
+
+
+class MeSerializer(serializers.ModelSerializer):
+    """Serializer for current user with limit accsess."""
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role',
+        )
+        read_only_fields = ('role',)

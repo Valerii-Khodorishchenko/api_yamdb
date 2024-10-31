@@ -10,7 +10,7 @@ from django.contrib.auth.tokens import default_token_generator as dtg
 from django.core.mail import send_mail
 
 from .serializers import (
-    UserSerializer, TokenObtainSerializer, UserSignUpSerializer
+    UserSerializer, TokenObtainSerializer, UserSignUpSerializer, MeSerializer
 )
 from .models import User
 from .permissions import IsAdmin
@@ -63,3 +63,13 @@ class TokenObtainView(APIView):
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MeView(APIView):
+    """View for getting current user."""
+
+    serializer_class = MeSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        return self.request.user
