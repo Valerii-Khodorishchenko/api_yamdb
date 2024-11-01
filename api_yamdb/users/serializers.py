@@ -1,4 +1,3 @@
-"""Users serializers."""
 from rest_framework import serializers
 from django.contrib.auth.tokens import default_token_generator as dtg
 
@@ -6,8 +5,6 @@ from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """User serializer."""
-
     class Meta:
         model = User
         fields = (
@@ -21,8 +18,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserSignUpSerializer(serializers.ModelSerializer):
-    """User sign up serializer."""
-
     class Meta:
         model = User
         fields = ('email', 'username')
@@ -32,7 +27,6 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         }
 
     def validate_username(self, value):
-        """Validate username."""
         if value.lower() == 'me':
             raise serializers.ValidationError(
                 'Использование "me" в качестве имени пользователя запрещено.'
@@ -40,7 +34,6 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        """Validate user data."""
         if User.objects.filter(username=data['username']).exists():
             raise serializers.ValidationError(
                 'Пользователь с таким именем уже существует.'
@@ -53,8 +46,6 @@ class UserSignUpSerializer(serializers.ModelSerializer):
 
 
 class TokenObtainSerializer(serializers.Serializer):
-    """Serializer for getting token via confirmation code."""
-
     username = serializers.CharField()
     confirmation_code = serializers.CharField()
 
@@ -78,8 +69,6 @@ class TokenObtainSerializer(serializers.Serializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
-    """Serializer for current user with limit accsess."""
-
     class Meta:
         model = User
         fields = (

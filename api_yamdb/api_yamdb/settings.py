@@ -1,4 +1,3 @@
-"""Django settings for api_yamdb project."""
 from pathlib import Path
 from datetime import timedelta
 

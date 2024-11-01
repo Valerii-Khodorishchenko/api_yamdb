@@ -1,4 +1,3 @@
-"""Users views."""
 from rest_framework import status, filters
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ModelViewSet
@@ -17,8 +16,6 @@ from .permissions import IsAdmin
 
 
 class UserViewSet(ModelViewSet):
-    """Manage users."""
-
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
@@ -52,8 +49,6 @@ class SignupView(APIView):
 
 
 class TokenObtainView(APIView):
-    """View for getting token."""
-
     permission_classes = (AllowAny,)
 
     def post(self, request):
@@ -66,8 +61,6 @@ class TokenObtainView(APIView):
 
 
 class MeView(APIView):
-    """View for getting current user."""
-
     serializer_class = MeSerializer
     permission_classes = (IsAuthenticated,)
 
