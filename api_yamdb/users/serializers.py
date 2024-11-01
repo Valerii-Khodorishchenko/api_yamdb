@@ -1,5 +1,7 @@
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 from django.contrib.auth.tokens import default_token_generator as dtg
+from django.contrib.auth.validators import UnicodeUsernameValidator
 
 from .models import User
 
@@ -18,13 +20,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserSignUpSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[UnicodeUsernameValidator()],
+    )
+    email = serializers.EmailField(max_length=254, required=True)
     class Meta:
         model = User
         fields = ('email', 'username')
-        extra_kwargs = {
-            'email': {'required': True},
-            'username': {'required': True},
-        }
 
     def validate_username(self, value):
         if value.lower() == 'me':
@@ -32,17 +36,6 @@ class UserSignUpSerializer(serializers.ModelSerializer):
                 'Использование "me" в качестве имени пользователя запрещено.'
             )
         return value
-
-    def validate(self, data):
-        if User.objects.filter(username=data['username']).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким именем уже существует.'
-            )
-        if User.objects.filter(email=data['email']).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже существует.'
-            )
-        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
@@ -55,7 +48,7 @@ class TokenObtainSerializer(serializers.Serializer):
 
         user = User.objects.filter(username=username).first()
         if user is None:
-            raise serializers.ValidationError(
+            raise NotFound(
                 'Пользователь с таким именем не существует.'
             )
 
@@ -68,7 +61,8 @@ class TokenObtainSerializer(serializers.Serializer):
         return attrs
 
 
-class MeSerializer(serializers.ModelSerializer):
+class CurrentUserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
     class Meta:
         model = User
         fields = (
@@ -79,4 +73,3 @@ class MeSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
-        read_only_fields = ('role',)
