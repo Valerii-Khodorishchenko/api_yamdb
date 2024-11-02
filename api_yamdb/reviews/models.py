@@ -3,7 +3,11 @@ from django.db import models
 
 class Category(models.Model):
     name = models.CharField('Название категории', max_length=256)
-    slug = models.SlugField('Идентификатор категории', unique=True)
+    slug = models.SlugField(
+        'Идентификатор категории',
+        max_length=50,
+        unique=True
+    )
 
     class Meta:
         verbose_name = 'категория'
@@ -15,7 +19,11 @@ class Category(models.Model):
 
 class Genre(models.Model):
     name = models.CharField('Название жанра', max_length=256)
-    slug = models.SlugField('Идентификатор жанра', unique=True)
+    slug = models.SlugField(
+        'Идентификатор жанра',
+        max_length=50,
+        unique=True
+    )
 
     class Meta:
         verbose_name = 'жанр'
