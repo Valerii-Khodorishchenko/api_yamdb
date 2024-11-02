@@ -24,7 +24,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-    'users.apps.UsersConfig',
     'api.apps.ApiConfig',
     'reviews.apps.ReviewsConfig',
 ]
@@ -128,7 +127,7 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
 # Users
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'reviews.User'
 
 # Email
 

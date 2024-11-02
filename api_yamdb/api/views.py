@@ -15,8 +15,8 @@ from .serializers import (
     UserSignUpSerializer,
     CurrentUserSerializer
 )
-from .models import User
-from .permissions import IsAdmin
+from reviews.models import User
+from api.permissions import IsAdmin
 
 
 def send_confirmation_code(user):

@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.contrib.auth.validators import UnicodeUsernameValidator
 
-from .models import User
+from reviews.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
