@@ -1,4 +1,5 @@
 from rest_framework import viewsets, mixins
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser, AllowAny
 
 from .serializers import CategorySerializer, GenreSerializer
@@ -14,6 +15,8 @@ class CategoryViewSet(
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
+    filter_backends = (SearchFilter, )
+    search_fields = ('name',)
 
     def get_permissions(self):
         if self.action == 'list':
@@ -32,6 +35,8 @@ class GenreViewSet(
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
+    filter_backends = (SearchFilter, )
+    search_fields = ('name',)
 
     def get_permissions(self):
         if self.action == 'list':
