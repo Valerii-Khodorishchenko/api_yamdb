@@ -1,9 +1,11 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Avg
 #TODO удалить после сздания кастомной модели User
 from django.contrib.auth import get_user_model
 
 User = get_user_model()  #TODO удалить после сздания кастомной модели User
+
 
 class Category(models.Model):
     name = models.CharField('Название категории', max_length=256)
@@ -45,6 +47,10 @@ class Title(models.Model):
         null=True, verbose_name='Категория'
     )
     genre = models.ManyToManyField(Genre, verbose_name='Жанр')
+    rating = models.DecimalField(
+        'Средний рейтинг', max_digits=3, decimal_places=1,
+        null=True, blank=True
+    )
 
     class Meta:
         verbose_name = 'произведение'
@@ -53,6 +59,11 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name[:26]
+
+    def update_rating(self):
+        average_score = self.reviews.aggregate(Avg('score'))['score__avg']
+        self.rating = round(average_score, 1) if average_score is not None else None
+        self.save()
 
 
 class Review(models.Model):
