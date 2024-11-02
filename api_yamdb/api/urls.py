@@ -7,7 +7,6 @@ from .views import UserViewSet, SignupView, TokenObtainView
 router_v1 = DefaultRouter()
 router_v1.register('users', UserViewSet, basename='users')
 
-
 urlpatterns = [
     path('v1/', include(router_v1.urls)),
     path('v1/auth/signup/', SignupView.as_view(), name='signup'),

@@ -1,22 +1,22 @@
-from rest_framework import filters, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework_simplejwt.tokens import AccessToken
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.core.mail import send_mail
+from rest_framework import filters, status
+from rest_framework.decorators import action
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.viewsets import ModelViewSet
 
-from .serializers import (
-    UserSerializer,
+from api.permissions import IsAdmin
+from api.serializers import (
+    CurrentUserSerializer,
     TokenObtainSerializer,
+    UserSerializer,
     UserSignUpSerializer,
-    CurrentUserSerializer
 )
 from reviews.models import User
-from api.permissions import IsAdmin
 
 
 def send_confirmation_code(user):

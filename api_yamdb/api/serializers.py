@@ -45,18 +45,15 @@ class TokenObtainSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs.get('username')
         confirmation_code = attrs.get('confirmation_code')
-
         user = User.objects.filter(username=username).first()
         if user is None:
             raise NotFound(
                 'Пользователь с таким именем не существует.'
             )
-
         if not dtg.check_token(user, confirmation_code):
             raise serializers.ValidationError(
                 'Неверный код подтверждения.'
             )
-
         attrs['user'] = user
         return attrs
 
