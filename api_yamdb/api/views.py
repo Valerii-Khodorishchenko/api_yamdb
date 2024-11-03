@@ -1,7 +1,6 @@
-from rest_framework import filters, status
+from rest_framework import filters, status, viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import AccessToken
@@ -29,47 +28,23 @@ def send_confirmation_code(user):
         fail_silently=False
     )
 
-class UserViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = (IsAdmin,)
-    lookup_field = 'username'
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('username',)
+
+class AuthViewSet(viewsets.GenericViewSet):
+    permission_classes = (AllowAny,)
+
+    def get_serializer_class(self):
+        if self.action == 'signup':
+            return UserSignUpSerializer
+        elif self.action == 'get_token':
+            return TokenObtainSerializer
 
     @action(
         detail=False,
-        methods=['get', 'patch'],
-        permission_classes=[IsAuthenticated],
-        serializer_class=CurrentUserSerializer
+        methods=['post'],
+        url_path='signup',
     )
-    def me(self, request):
-        user = request.user
-        if request.method == 'GET':
-            serializer = self.get_serializer(user)
-            return Response(serializer.data)
-        elif request.method == 'PATCH':
-            serializer = self.get_serializer(
-                user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
-
-    def update(self, request, *args, **kwargs):
-        if request.method == 'PUT':
-            return Response(
-                {'detail': 'Метод "PUT" недоступен.'},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED
-            )
-        return super().update(request, *args, **kwargs)
-
-
-class SignupView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = UserSignUpSerializer(data=request.data)
+    def signup(self, request):
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
             email = serializer.validated_data['email']
@@ -97,14 +72,50 @@ class SignupView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class TokenObtainView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = TokenObtainSerializer(data=request.data)
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='token'
+    )
+    def get_token(self, request):
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsAdmin,)
+    lookup_field = 'username'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+
+    @action(
+        detail=False,
+        methods=['get', 'patch'],
+        permission_classes=[IsAuthenticated],
+        serializer_class=CurrentUserSerializer
+    )
+    def me(self, request):
+        if request.method == 'GET':
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(
+                request.user, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return Response(
+                {'detail': 'Метод "PUT" недоступен.'},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED
+            )
+        return super().update(request, *args, **kwargs)
