@@ -7,14 +7,19 @@ from rest_framework_simplejwt.tokens import AccessToken
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.core.mail import send_mail
+from django_filters import rest_framework
 
 from .serializers import (
     UserSerializer,
     TokenObtainSerializer,
     UserSignUpSerializer,
-    CurrentUserSerializer
+    CurrentUserSerializer,
+    CategorySerializer,
+    GenreSerializer,
+    TitleSerializer
 )
-from reviews.models import User
+from reviews.models import User, Category, Genre, Title
+from api.permissions import IsAdmin, IsAdminOrReadOnly
 
 
 def send_confirmation_code(user):
@@ -118,3 +123,51 @@ class UserViewSet(ModelViewSet):
                 status=status.HTTP_405_METHOD_NOT_ALLOWED
             )
         return super().update(request, *args, **kwargs)
+
+
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_field = 'slug'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly, )
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class GenreViewSet(ModelViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    lookup_field = 'slug'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly, )
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class TitleFilter(rest_framework.FilterSet):
+    category = rest_framework.CharFilter(field_name='category__slug')
+    genre = rest_framework.CharFilter(field_name='genre__slug')
+
+    class Meta:
+        model = Title
+        fields = ['category', 'genre', 'name', 'year']
+
+
+class TitleViewSet(ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    filter_backends = (rest_framework.DjangoFilterBackend, )
+    filterset_class = TitleFilter
+    permission_classes = (IsAdminOrReadOnly, )
+    http_method_names = ('get', 'post', 'patch', 'delete')

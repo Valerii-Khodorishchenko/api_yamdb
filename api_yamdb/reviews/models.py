@@ -4,6 +4,7 @@ from django.core.validators import (
     MaxValueValidator, MinValueValidator, EmailValidator
 )
 from django.db import models
+from django.db.models import Avg
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 
@@ -61,7 +62,11 @@ class User(AbstractUser):
 
 class Category(models.Model):
     name = models.CharField('Название категории', max_length=256)
-    slug = models.SlugField('Идентификатор категории', unique=True)
+    slug = models.SlugField(
+        'Идентификатор категории',
+        max_length=50,
+        unique=True
+    )
 
     class Meta:
         verbose_name = 'категория'
@@ -73,7 +78,11 @@ class Category(models.Model):
 
 class Genre(models.Model):
     name = models.CharField('Название жанра', max_length=256)
-    slug = models.SlugField('Идентификатор жанра', unique=True)
+    slug = models.SlugField(
+        'Идентификатор жанра',
+        max_length=50,
+        unique=True
+    )
 
     class Meta:
         verbose_name = 'жанр'
@@ -86,6 +95,12 @@ class Genre(models.Model):
 class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.PositiveIntegerField('Год')
+    description = models.TextField(
+        'Описание произведения',
+        null=True,
+        max_length=256
+    )
+
     rating = models.PositiveSmallIntegerField(
         'Рейтинг', null=True, blank=True,
         validators=(MinValueValidator(0), MaxValueValidator(10))
