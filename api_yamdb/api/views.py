@@ -15,7 +15,6 @@ from .serializers import (
     CurrentUserSerializer
 )
 from reviews.models import User
-from api.permissions import IsAdmin
 
 
 def send_confirmation_code(user):
