@@ -1,9 +1,11 @@
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
+from rest_framework.validators import  UniqueTogetherValidator
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.contrib.auth.validators import UnicodeUsernameValidator
 
-from reviews.models import User
+
+from reviews.models import Comment, Review, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,6 +28,7 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         validators=[UnicodeUsernameValidator()],
     )
     email = serializers.EmailField(max_length=254, required=True)
+
     class Meta:
         model = User
         fields = ('email', 'username')
@@ -70,3 +73,40 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    title = serializers.HiddenField(
+        default=TitleSerializer()
+    )
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
+
+    class Meta:
+        model = Review
+        fields = '__all__'
+        read_only_fields = ('author', 'title', 'pub_date')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Review.objects.all(),
+                fields=('author', 'title'),
+                message='Вы уже оставляли отзыв к этому произведению.'
+            )
+        ]
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
+    review = serializers.HiddenField(
+        default=None
+    )
+
+    class Meta:
+        model = Comment
+        fields = '__all__'
+        read_only_fields = ('author', 'pub_date')

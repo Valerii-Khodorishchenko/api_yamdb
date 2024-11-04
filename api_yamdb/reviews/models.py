@@ -6,18 +6,6 @@ from django.core.validators import (
 from django.db import models
 
 
-class Category(models.Model):
-    name = models.CharField('Название категории', max_length=256)
-    slug = models.SlugField('Идентификатор категории', unique=True)
-
-    class Meta:
-        verbose_name = 'категория'
-        verbose_name_plural = 'Категории'
-
-    def __str__(self):
-        return self.name[:26]
-
-
 class User(AbstractUser):
     class Role(models.TextChoices):
         USER = 'user', 'User'
@@ -68,6 +56,19 @@ class User(AbstractUser):
     def is_moderator(self):
         return self.role == self.Role.MODERATOR
 
+
+class Category(models.Model):
+    name = models.CharField('Название категории', max_length=256)
+    slug = models.SlugField('Идентификатор категории', unique=True)
+
+    class Meta:
+        verbose_name = 'категория'
+        verbose_name_plural = 'Категории'
+
+    def __str__(self):
+        return self.name[:26]
+
+
 class Genre(models.Model):
     name = models.CharField('Название жанра', max_length=256)
     slug = models.SlugField('Идентификатор жанра', unique=True)
@@ -83,11 +84,16 @@ class Genre(models.Model):
 class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.PositiveIntegerField('Год')
+    rating = models.PositiveSmallIntegerField(
+        'Рейтинг', null=True, blank=True,
+        validators=(MinValueValidator(0), MaxValueValidator(10))
+    )
+    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
+    description = models.TextField('Описание', max_length=255, blank=True)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
         null=True, verbose_name='Категория'
     )
-    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
 
     class Meta:
         verbose_name = 'произведение'
@@ -106,7 +112,7 @@ class Review(models.Model):
     )
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
-        validators=[MinValueValidator(1), MaxValueValidator(10)]
+        validators=(MinValueValidator(1), MaxValueValidator(10))
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     title = models.ForeignKey(
@@ -121,7 +127,7 @@ class Review(models.Model):
         default_related_name = 'reviews'
         constraints = [
             models.UniqueConstraint(
-                fields=['author', 'title'],
+                fields=('author', 'title'),
                 name='unique_author_title'
             )
         ]
