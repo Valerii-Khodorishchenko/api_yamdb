@@ -1,9 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import (
-    EmailValidator, (
     MaxValueValidator, MinValueValidator, EmailValidator
-)
 )
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -21,56 +19,6 @@ class Category(models.Model):
     def __str__(self):
         return self.name[:26]
 
-
-class User(AbstractUser):
-    class Role(models.TextChoices):
-        USER = 'user', 'User'
-        MODERATOR = 'moderator', 'Moderator'
-        ADMIN = 'admin', 'Admin'
-
-    bio = models.TextField('О себе', blank=True)
-    role = models.CharField(
-        'Роль',
-        max_length=10,
-        choices=Role.choices,
-        default=Role.USER,
-    )
-    email = models.EmailField(
-        'Адрес электронной почты',
-        max_length=254,
-        unique=True,
-        validators=(EmailValidator(),),
-    )
-    username = models.CharField(
-        'Имя пользователя',
-        max_length=150,
-        unique=True,
-        help_text=(
-            'Не более 150 символов. Только буквы, цифры и @/./+/-/_.',
-        ),
-        validators=(UnicodeUsernameValidator(),),
-        error_messages={
-            'unique': 'Пользователь с таким username уже существует.',
-        },
-    )
-
-    class Meta:
-        verbose_name = 'пользователь'
-        verbose_name_plural = 'Пользователи'
-        ordering = ('username',)
-
-    def __str__(self):
-        return self.username
-
-    @property
-    def is_admin(self):
-        return (
-            self.role == self.Role.ADMIN or self.is_superuser
-        )
-
-    @property
-    def is_moderator(self):
-        return self.role == self.Role.MODERATOR
 
 class User(AbstractUser):
     class Role(models.TextChoices):
