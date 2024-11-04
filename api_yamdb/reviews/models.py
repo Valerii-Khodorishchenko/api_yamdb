@@ -1,3 +1,5 @@
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import (
     MaxValueValidator, MinValueValidator, EmailValidator
 )
@@ -98,11 +100,17 @@ class Title(models.Model):
         null=True,
         max_length=256
     )
+
+    rating = models.PositiveSmallIntegerField(
+        'Рейтинг', null=True, blank=True,
+        validators=(MinValueValidator(0), MaxValueValidator(10))
+    )
+    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
+    description = models.TextField('Описание', max_length=255, blank=True)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
         null=True, verbose_name='Категория'
     )
-    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
 
     class Meta:
         verbose_name = 'произведение'
@@ -111,11 +119,6 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name[:26]
-
-    def update_rating(self):
-        average_score = self.reviews.aggregate(Avg('score'))['score__avg']
-        self.rating = round(average_score, 1) if average_score else None
-        self.save()
 
 
 class Review(models.Model):
@@ -126,7 +129,7 @@ class Review(models.Model):
     )
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
-        validators=[MinValueValidator(1), MaxValueValidator(10)]
+        validators=(MinValueValidator(1), MaxValueValidator(10))
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     title = models.ForeignKey(
@@ -141,7 +144,7 @@ class Review(models.Model):
         default_related_name = 'reviews'
         constraints = [
             models.UniqueConstraint(
-                fields=['author', 'title'],
+                fields=('author', 'title'),
                 name='unique_author_title'
             )
         ]
@@ -170,4 +173,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'{self.author} прокомментировал {self.review}'
-

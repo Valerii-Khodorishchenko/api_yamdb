@@ -1,12 +1,82 @@
+import datetime
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
+from rest_framework.validators import  UniqueTogetherValidator
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db.models import Avg
 
-import datetime
 
 from reviews.models import User, Category, Genre, Title
+
+
+class UserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role',
+        )
+
+
+class UserSignUpSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=[UnicodeUsernameValidator()],
+    )
+    email = serializers.EmailField(max_length=254, required=True)
+
+    class Meta:
+        model = User
+        fields = ('email', 'username')
+
+    def validate_username(self, value):
+        if value.lower() == 'me':
+            raise serializers.ValidationError(
+                'Использование "me" в качестве имени пользователя запрещено.'
+            )
+        return value
+
+
+class TokenObtainSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    confirmation_code = serializers.CharField()
+
+    def validate(self, attrs):
+        username = attrs.get('username')
+        confirmation_code = attrs.get('confirmation_code')
+        user = User.objects.filter(username=username).first()
+        if user is None:
+            raise NotFound(
+                'Пользователь с таким именем не существует.'
+            )
+        if not dtg.check_token(user, confirmation_code):
+            raise serializers.ValidationError(
+                'Неверный код подтверждения.'
+            )
+        attrs['user'] = user
+        return attrs
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role',
+        )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -71,72 +141,39 @@ class TitleSerializer(serializers.ModelSerializer):
         return representation
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'bio',
-            'role',
-        )
 
-
-class UserSignUpSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=150,
-        required=True,
-        validators=[UnicodeUsernameValidator()],
+class ReviewSerializer(serializers.ModelSerializer):
+    title = serializers.HiddenField(
+        default=TitleSerializer()
     )
-    email = serializers.EmailField(max_length=254, required=True)
-    
-    class Meta:
-        model = User
-        fields = ('email', 'username')
-
-    def validate_username(self, value):
-        if value.lower() == 'me':
-            raise serializers.ValidationError(
-                'Использование "me" в качестве имени пользователя запрещено.'
-            )
-        return value
-
-
-class TokenObtainSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    confirmation_code = serializers.CharField()
-
-    def validate(self, attrs):
-        username = attrs.get('username')
-        confirmation_code = attrs.get('confirmation_code')
-
-        user = User.objects.filter(username=username).first()
-        if user is None:
-            raise NotFound(
-                'Пользователь с таким именем не существует.'
-            )
-
-        if not dtg.check_token(user, confirmation_code):
-            raise serializers.ValidationError(
-                'Неверный код подтверждения.'
-            )
-
-        attrs['user'] = user
-        return attrs
-
-
-class CurrentUserSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(read_only=True)
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
-        model = User
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'bio',
-            'role',
-        )
+        model = Review
+        fields = '__all__'
+        read_only_fields = ('author', 'title', 'pub_date')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Review.objects.all(),
+                fields=('author', 'title'),
+                message='Вы уже оставляли отзыв к этому произведению.'
+            )
+        ]
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
+    review = serializers.HiddenField(
+        default=None
+    )
+
+    class Meta:
+        model = Comment
+        fields = '__all__'
+        read_only_fields = ('author', 'pub_date')
