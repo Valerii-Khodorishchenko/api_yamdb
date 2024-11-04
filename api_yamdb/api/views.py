@@ -1,22 +1,27 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.core.mail import send_mail
-from rest_framework import filters, status
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import  ValidationError
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.viewsets import ModelViewSet
 
-from api.permissions import IsAdmin
+from api.permissions import (
+    IsAdmin, IsAuthorOrModeratorOrAdmin)
 from api.serializers import (
+    CommentSerializer,
     CurrentUserSerializer,
+    ReviewSerializer,
     TokenObtainSerializer,
     UserSerializer,
     UserSignUpSerializer,
 )
-from reviews.models import User
+from reviews.models import Review, Title, User
 
 
 def send_confirmation_code(user):
@@ -29,7 +34,8 @@ def send_confirmation_code(user):
         fail_silently=False
     )
 
-class UserViewSet(ModelViewSet):
+
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
@@ -39,8 +45,8 @@ class UserViewSet(ModelViewSet):
 
     @action(
         detail=False,
-        methods=['get', 'patch'],
-        permission_classes=[IsAuthenticated],
+        methods=('get', 'patch'),
+        permission_classes=(IsAuthenticated,),
         serializer_class=CurrentUserSerializer
     )
     def me(self, request):
@@ -108,3 +114,40 @@ class TokenObtainView(APIView):
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs['title_id'])
+
+    def get_queryset(self):
+        return self.get_title().reviews.select_related('title')
+
+    def perform_create(self, serializer):
+        if Review.objects.filter(
+            author=self.request.user, title=self.get_title()
+        ).exists():
+            raise ValidationError(
+                'Вы уже оставляли отзыв к этому произведению.')
+        serializer.save(author=self.request.user, title=self.get_title())
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs['review_id'])
+
+    def get_queryset(self):
+        return self.get_review().comments.select_related('review')
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.get_review())
