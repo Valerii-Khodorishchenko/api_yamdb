@@ -1,25 +1,31 @@
-from rest_framework import filters, status, viewsets
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework_simplejwt.tokens import AccessToken
 from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator as dtg
 from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator as dtg
+from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import  ValidationError
+from rest_framework.response import Response
+from rest_framework.permissions import (
+    IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
+from rest_framework_simplejwt.tokens import AccessToken
+
 
 from .serializers import (
-    UserSerializer,
-    TokenObtainSerializer,
-    UserSignUpSerializer,
-    CurrentUserSerializer,
     CategorySerializer,
+    CommentSerializer,
+    CurrentUserSerializer,
     GenreSerializer,
-    TitleSerializer
+    ReviewSerializer,
+    TokenObtainSerializer,
+    TitleSerializer,
+    UserSerializer,
+    UserSignUpSerializer
 )
-from reviews.models import User, Category, Genre, Title
-from api.permissions import IsAdmin, IsAdminOrReadOnly
+from api.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin)
+from reviews.models import Category, Genre, Review, Title, User
 
 
 def send_confirmation_code(user):
@@ -78,7 +84,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(
         detail=False,
-        methods=['post'],
+        methods=('post',),
         url_path='token'
     )
     def get_token(self, request):
@@ -90,7 +96,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserViewSet(ModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdmin,)
@@ -100,8 +106,8 @@ class UserViewSet(ModelViewSet):
 
     @action(
         detail=False,
-        methods=['get', 'patch'],
-        permission_classes=[IsAuthenticated],
+        methods=('get', 'patch'),
+        permission_classes=(IsAuthenticated,),
         serializer_class=CurrentUserSerializer
     )
     def me(self, request):
@@ -125,13 +131,13 @@ class UserViewSet(ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
-class CategoryViewSet(ModelViewSet):
+class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-    permission_classes = (IsAdminOrReadOnly, )
+    permission_classes = (IsAdminOrReadOnly,)
 
     def retrieve(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -140,13 +146,13 @@ class CategoryViewSet(ModelViewSet):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class GenreViewSet(ModelViewSet):
+class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-    permission_classes = (IsAdminOrReadOnly, )
+    permission_classes = (IsAdminOrReadOnly,)
 
     def retrieve(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -161,13 +167,50 @@ class TitleFilter(rest_framework.FilterSet):
 
     class Meta:
         model = Title
-        fields = ['category', 'genre', 'name', 'year']
+        fields = ('category', 'genre', 'name', 'year')
 
 
-class TitleViewSet(ModelViewSet):
+class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
     filter_backends = (rest_framework.DjangoFilterBackend, )
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly, )
     http_method_names = ('get', 'post', 'patch', 'delete')
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_title(self):
+        return get_object_or_404(Title, id=self.kwargs['title_id'])
+
+    def get_queryset(self):
+        return self.get_title().reviews.select_related('title')
+
+    def perform_create(self, serializer):
+        if Review.objects.filter(
+            author=self.request.user, title=self.get_title()
+        ).exists():
+            raise ValidationError(
+                'Вы уже оставляли отзыв к этому произведению.')
+        serializer.save(author=self.request.user, title=self.get_title())
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (
+        IsAuthenticatedOrReadOnly, IsAuthorOrModeratorOrAdmin,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_review(self):
+        return get_object_or_404(Review, id=self.kwargs['review_id'])
+
+    def get_queryset(self):
+        return self.get_review().comments.select_related('review')
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.get_review())

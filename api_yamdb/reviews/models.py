@@ -1,12 +1,9 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import (
-    MaxValueValidator, MinValueValidator, EmailValidator
+    EmailValidator, MaxValueValidator, MinValueValidator
 )
 from django.db import models
-from django.db.models import Avg
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.validators import UnicodeUsernameValidator
 
 
 class User(AbstractUser):
@@ -103,7 +100,7 @@ class Title(models.Model):
 
     rating = models.PositiveSmallIntegerField(
         'Рейтинг', null=True, blank=True,
-        validators=(MinValueValidator(0), MaxValueValidator(10))
+        validators=(MinValueValidator(1), MaxValueValidator(10))
     )
     genre = models.ManyToManyField(Genre, verbose_name='Жанр')
     description = models.TextField('Описание', max_length=255, blank=True)

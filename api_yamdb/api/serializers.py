@@ -7,7 +7,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db.models import Avg
 
 
-from reviews.models import User, Category, Genre, Title
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class UserSignUpSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=[UnicodeUsernameValidator()],
+        validators=(UnicodeUsernameValidator(),),
     )
     email = serializers.EmailField(max_length=254, required=True)
 
@@ -139,7 +139,6 @@ class TitleSerializer(serializers.ModelSerializer):
             'name': instance.category.name, 'slug': instance.category.slug
         }
         return representation
-
 
 
 class ReviewSerializer(serializers.ModelSerializer):
