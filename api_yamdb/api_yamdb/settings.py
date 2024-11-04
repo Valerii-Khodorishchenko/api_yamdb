@@ -22,12 +22,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-<<<<<<< HEAD
-    'django_filters',
-=======
     'rest_framework',
+    'django_filters',
     'rest_framework_simplejwt',
->>>>>>> 651b5ae721ac6a5dff7af52c3ac5a10dcb28a752
     'api.apps.ApiConfig',
     'reviews.apps.ReviewsConfig',
 ]
@@ -101,7 +98,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 2,
 }
 
 SIMPLE_JWT = {
@@ -129,14 +126,6 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 
-<<<<<<< HEAD
-REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-    ],
-}
-=======
 # Users
 
 AUTH_USER_MODEL = 'reviews.User'
@@ -145,4 +134,3 @@ AUTH_USER_MODEL = 'reviews.User'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'No-reply <yamdb@no-reply.ru>'
->>>>>>> 651b5ae721ac6a5dff7af52c3ac5a10dcb28a752

@@ -2,31 +2,9 @@ from django.core.validators import (
     MaxValueValidator, MinValueValidator, EmailValidator
 )
 from django.db import models
-<<<<<<< HEAD
 from django.db.models import Avg
-#TODO удалить после сздания кастомной модели User
-from django.contrib.auth import get_user_model
-=======
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
->>>>>>> 651b5ae721ac6a5dff7af52c3ac5a10dcb28a752
-
-
-
-class Category(models.Model):
-    name = models.CharField('Название категории', max_length=256)
-    slug = models.SlugField(
-        'Идентификатор категории',
-        max_length=50,
-        unique=True
-    )
-
-    class Meta:
-        verbose_name = 'категория'
-        verbose_name_plural = 'Категории'
-
-    def __str__(self):
-        return self.name[:26]
 
 
 class User(AbstractUser):
@@ -79,6 +57,23 @@ class User(AbstractUser):
     def is_moderator(self):
         return self.role == self.Role.MODERATOR
 
+
+class Category(models.Model):
+    name = models.CharField('Название категории', max_length=256)
+    slug = models.SlugField(
+        'Идентификатор категории',
+        max_length=50,
+        unique=True
+    )
+
+    class Meta:
+        verbose_name = 'категория'
+        verbose_name_plural = 'Категории'
+
+    def __str__(self):
+        return self.name[:26]
+
+
 class Genre(models.Model):
     name = models.CharField('Название жанра', max_length=256)
     slug = models.SlugField(
@@ -98,15 +93,16 @@ class Genre(models.Model):
 class Title(models.Model):
     name = models.CharField('Название произведения', max_length=256)
     year = models.PositiveIntegerField('Год')
+    description = models.TextField(
+        'Описание произведения',
+        null=True,
+        max_length=256
+    )
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
         null=True, verbose_name='Категория'
     )
     genre = models.ManyToManyField(Genre, verbose_name='Жанр')
-    rating = models.DecimalField(
-        'Средний рейтинг', max_digits=3, decimal_places=1,
-        null=True, blank=True
-    )
 
     class Meta:
         verbose_name = 'произведение'
@@ -118,7 +114,7 @@ class Title(models.Model):
 
     def update_rating(self):
         average_score = self.reviews.aggregate(Avg('score'))['score__avg']
-        self.rating = round(average_score, 1) if average_score is not None else None
+        self.rating = round(average_score, 1) if average_score else None
         self.save()
 
 
