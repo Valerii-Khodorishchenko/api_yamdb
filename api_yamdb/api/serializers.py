@@ -9,6 +9,7 @@ from reviews.models import Comment, Review, User
 
 
 class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = (
@@ -63,6 +64,7 @@ class TokenObtainSerializer(serializers.Serializer):
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     role = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
         fields = (
