@@ -1,16 +1,16 @@
 from django.conf import settings
 from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator as dtg
+from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
 from rest_framework_simplejwt.tokens import AccessToken
-
 
 from .serializers import (
     CategorySerializer,
@@ -29,7 +29,7 @@ from reviews.models import Category, Genre, Review, Title, User
 
 
 def send_confirmation_code(user):
-    confirmation_code = dtg.make_token(user)
+    confirmation_code = default_token_generator.make_token(user)
     send_mail(
         'Код подтверждения',
         f'Ваш код подтверждения: {confirmation_code}',
@@ -131,7 +131,42 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+# class CategoryViewSet(viewsets.ModelViewSet):
+#     queryset = Category.objects.all()
+#     serializer_class = CategorySerializer
+#     lookup_field = 'slug'
+#     filter_backends = (filters.SearchFilter,)
+#     search_fields = ('name',)
+#     permission_classes = (IsAdminOrReadOnly,)
+
+#     def retrieve(self, request, *args, **kwargs):
+#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+#     def partial_update(self, request, *args, **kwargs):
+#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+# class GenreViewSet(viewsets.ModelViewSet):
+#     queryset = Genre.objects.all()
+#     serializer_class = GenreSerializer
+#     lookup_field = 'slug'
+#     filter_backends = (filters.SearchFilter,)
+#     search_fields = ('name',)
+#     permission_classes = (IsAdminOrReadOnly,)
+
+#     def retrieve(self, request, *args, **kwargs):
+#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+#     def partial_update(self, request, *args, **kwargs):
+#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class CategoryViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
@@ -139,26 +174,19 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ('name',)
     permission_classes = (IsAdminOrReadOnly,)
 
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def partial_update(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     permission_classes = (IsAdminOrReadOnly,)
-
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    def partial_update(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class TitleFilter(rest_framework.FilterSet):

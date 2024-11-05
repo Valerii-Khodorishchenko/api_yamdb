@@ -8,9 +8,9 @@ from django.db import models
 
 class User(AbstractUser):
     class Role(models.TextChoices):
-        USER = 'user', 'User'
-        MODERATOR = 'moderator', 'Moderator'
-        ADMIN = 'admin', 'Admin'
+        USER = 'user', 'Пользователь'
+        MODERATOR = 'moderator', 'Модератор'
+        ADMIN = 'admin', 'Администратор'
 
     bio = models.TextField('О себе', blank=True)
     role = models.CharField(
@@ -23,14 +23,13 @@ class User(AbstractUser):
         'Адрес электронной почты',
         max_length=254,
         unique=True,
-        validators=(EmailValidator(),),
     )
     username = models.CharField(
         'Имя пользователя',
         max_length=150,
         unique=True,
         help_text=(
-            'Не более 150 символов. Только буквы, цифры и @/./+/-/_.',
+            'Только буквы, цифры и @/./+/-/_.',
         ),
         validators=(UnicodeUsernameValidator(),),
         error_messages={
@@ -58,9 +57,9 @@ class User(AbstractUser):
 
 
 class Category(models.Model):
-    name = models.CharField('Название категории', max_length=256)
+    name = models.CharField('Название', max_length=256)
     slug = models.SlugField(
-        'Идентификатор категории',
+        'Идентификатор',
         max_length=50,
         unique=True
     )
@@ -74,9 +73,9 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    name = models.CharField('Название жанра', max_length=256)
+    name = models.CharField('Название', max_length=256)
     slug = models.SlugField(
-        'Идентификатор жанра',
+        'Идентификатор',
         max_length=50,
         unique=True
     )
@@ -97,13 +96,8 @@ class Title(models.Model):
         null=True,
         max_length=256
     )
-
-    rating = models.PositiveSmallIntegerField(
-        'Рейтинг', null=True, blank=True,
-        validators=(MinValueValidator(1), MaxValueValidator(10))
-    )
     genre = models.ManyToManyField(Genre, verbose_name='Жанр')
-    description = models.TextField('Описание', max_length=255, blank=True)
+    description = models.TextField('Описание', blank=True)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
         null=True, verbose_name='Категория'
@@ -119,10 +113,10 @@ class Title(models.Model):
 
 
 class Review(models.Model):
-    text = models.TextField('Текст отзыва')
+    text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор отзыва'
+        verbose_name='Автор'
     )
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
@@ -151,10 +145,10 @@ class Review(models.Model):
 
 
 class Comment(models.Model):
-    text = models.TextField('Текст комментария')
+    text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор комментария'
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     review = models.ForeignKey(
