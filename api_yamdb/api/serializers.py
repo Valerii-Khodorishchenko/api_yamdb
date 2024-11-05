@@ -1,7 +1,7 @@
 import datetime
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
-from rest_framework.validators import  UniqueTogetherValidator
+from rest_framework.validators import UniqueTogetherValidator
 from django.contrib.auth.tokens import default_token_generator as dtg
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db.models import Avg
