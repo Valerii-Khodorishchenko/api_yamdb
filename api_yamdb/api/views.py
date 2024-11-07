@@ -7,12 +7,10 @@ from django_filters import rest_framework
 from django.db.models import Avg
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
-from rest_framework_simplejwt.tokens import AccessToken
 
 from .serializers import (
     CategorySerializer,
@@ -160,11 +158,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return self.get_title().reviews.select_related('title')
 
     def perform_create(self, serializer):
-        if Review.objects.filter(
-            author=self.request.user, title=self.get_title()
-        ).exists():
-            raise ValidationError(
-                'Вы уже оставляли отзыв к этому произведению.')
         serializer.save(author=self.request.user, title=self.get_title())
 
 
