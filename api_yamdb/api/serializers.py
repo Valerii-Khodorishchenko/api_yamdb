@@ -117,7 +117,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    
+
     class Meta:
         model = Title
         fields = (
