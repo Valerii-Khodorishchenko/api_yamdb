@@ -104,7 +104,7 @@ class UserViewSet(viewsets.ModelViewSet):
         url_path=RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )
-    def me(self, request):
+    def update_user(self, request):
         serializer = self.get_serializer(
             request.user, data=request.data, partial=True
         )
