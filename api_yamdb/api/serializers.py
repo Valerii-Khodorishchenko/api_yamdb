@@ -72,8 +72,8 @@ class TokenObtainSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'confirmation_code': 'Неверный код подтверждения.'}
             )
-        token = AccessToken.for_user(user)
-        return {'token': str(token)}
+        attrs['user'] = user
+        return attrs
 
 
 class CategorySerializer(serializers.ModelSerializer):
