@@ -1,6 +1,7 @@
+import random
+
 from django.conf import settings
 from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
 from rest_framework import filters, status, viewsets
@@ -26,10 +27,10 @@ from .serializers import (
 from api.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin)
 from reviews.models import Category, Genre, Review, Title, User
+from api_yamdb.constants import RESERVED_NAME
 
 
-def send_confirmation_code(user):
-    confirmation_code = default_token_generator.make_token(user)
+def send_confirmation_code(user, confirmation_code):
     send_mail(
         'Код подтверждения',
         f'Ваш код подтверждения: {confirmation_code}',
@@ -42,58 +43,49 @@ def send_confirmation_code(user):
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = (AllowAny,)
 
-    def get_serializer_class(self):
-        if self.action == 'signup':
-            return UserSignUpSerializer
-        elif self.action == 'get_token':
-            return TokenObtainSerializer
-
     @action(
         detail=False,
         methods=['post'],
         url_path='signup',
+        serializer_class=UserSignUpSerializer
     )
     def signup(self, request):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
-            email = serializer.validated_data['email']
-            if (
-                User.objects.filter(email=email)
-                .exclude(username=username)
-                .exists()
-            ):
-                return Response(
-                    {'email': 'Пользователь с таким email уже существует.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            user = User.objects.filter(username=username).first()
-            if user:
-                if user.email != email:
-                    return Response(
-                        {'email': 'Email не совпадает.'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-            else:
-                user = User.objects.create_user(
-                    username=username, email=email
-                )
-            send_confirmation_code(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
+        user, created = User.objects.get_or_create(username=username)
+        if not created and user.email != email:
+            return Response(
+                {'email': 'Email не совпадает.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if (
+            User.objects.filter(email=email)
+            .exclude(username=username)
+            .exists()
+        ):
+            return Response(
+                {'email': 'Пользователь с таким email уже существует.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user.email = email
+        confirmation_code = str(random.randint(100000, 999999))
+        user.confirmation_code = confirmation_code
+        user.save()
+        send_confirmation_code(user, confirmation_code)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
         detail=False,
         methods=('post',),
-        url_path='token'
+        url_path='token',
+        serializer_class=TokenObtainSerializer
     )
     def get_token(self, request):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data['user']
-            token = AccessToken.for_user(user)
-            return Response({'token': str(token)}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -103,62 +95,22 @@ class UserViewSet(viewsets.ModelViewSet):
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     @action(
         detail=False,
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
+        url_path=RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )
     def me(self, request):
-        if request.method == 'GET':
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
-        elif request.method == 'PATCH':
-            serializer = self.get_serializer(
-                request.user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
-
-    def update(self, request, *args, **kwargs):
-        if request.method == 'PUT':
-            return Response(
-                {'detail': 'Метод "PUT" недоступен.'},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED
-            )
-        return super().update(request, *args, **kwargs)
-
-
-# class CategoryViewSet(viewsets.ModelViewSet):
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-#     lookup_field = 'slug'
-#     filter_backends = (filters.SearchFilter,)
-#     search_fields = ('name',)
-#     permission_classes = (IsAdminOrReadOnly,)
-
-#     def retrieve(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-#     def partial_update(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-# class GenreViewSet(viewsets.ModelViewSet):
-#     queryset = Genre.objects.all()
-#     serializer_class = GenreSerializer
-#     lookup_field = 'slug'
-#     filter_backends = (filters.SearchFilter,)
-#     search_fields = ('name',)
-#     permission_classes = (IsAdminOrReadOnly,)
-
-#     def retrieve(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-#     def partial_update(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        serializer = self.get_serializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class CategoryViewSet(
