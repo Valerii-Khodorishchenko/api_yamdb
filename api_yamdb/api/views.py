@@ -57,20 +57,6 @@ class AuthViewSet(viewsets.GenericViewSet):
         username = serializer.validated_data['username']
         email = serializer.validated_data['email']
         user, created = User.objects.get_or_create(username=username)
-        if not created and user.email != email:
-            return Response(
-                {'email': 'Email не совпадает.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if (
-            User.objects.filter(email=email)
-            .exclude(username=username)
-            .exists()
-        ):
-            return Response(
-                {'email': 'Пользователь с таким email уже существует.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
         user.email = email
         confirmation_code = str(random.randint(100000, 999999))
         user.confirmation_code = confirmation_code

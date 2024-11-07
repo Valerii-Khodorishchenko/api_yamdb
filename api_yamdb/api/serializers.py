@@ -43,6 +43,14 @@ class UserSignUpSerializer(serializers.Serializer):
     def validate(self, data):
         username = data['username']
         email = data['email']
+        user_qs = User.objects.filter(username=username)
+        if user_qs.exists():
+            user = user_qs.first()
+            if user.email != email:
+                raise serializers.ValidationError(
+                    {'email': 'Email не совпадает.'},
+                    {'username': 'Пользователь с таким именем существует.'},
+                )
         if (
             User.objects.filter(email=email)
             .exclude(username=username)
