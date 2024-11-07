@@ -1,3 +1,4 @@
+
 import random
 
 from django.conf import settings
@@ -11,7 +12,6 @@ from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
-
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -89,6 +89,7 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
+
         url_path=RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )

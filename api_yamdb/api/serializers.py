@@ -73,6 +73,7 @@ class TokenObtainSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs.get('username')
         confirmation_code = attrs.get('confirmation_code')
+
         user = get_object_or_404(User, username=username)
         if user.confirmation_code != confirmation_code:
             raise serializers.ValidationError(

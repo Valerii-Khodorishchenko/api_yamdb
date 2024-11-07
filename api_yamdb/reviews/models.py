@@ -17,6 +17,7 @@ from api_yamdb.constants import (
 
 class User(AbstractUser):
     class Role(models.TextChoices):
+
         USER = 'user', 'Пользователь'
         MODERATOR = 'moderator', 'Модератор'
         ADMIN = 'admin', 'Администратор'
@@ -61,12 +62,14 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return (
+
             self.role == self.Role.ADMIN or self.is_staff or self.is_superuser
         )
 
     @property
     def is_moderator(self):
         return self.role == self.Role.MODERATOR
+
 
 
 class BaseNameSlugModel(models.Model):
@@ -91,6 +94,7 @@ class Category(BaseNameSlugModel):
 
 
 class Genre(BaseNameSlugModel):
+
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
@@ -122,6 +126,7 @@ class Title(models.Model):
                 'Год выпуска ({value}) не может быть больше '
                 'текущего года ({current_year}).'
             )
+
 
     def __str__(self):
         return self.name[:26]
@@ -161,6 +166,7 @@ class Review(BaseContentReviewComment):
 
     def __str__(self):
         return f'Отзыв от {self.author} на {self.title}'
+
 
 
 class Comment(BaseContentReviewComment):
