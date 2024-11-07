@@ -5,6 +5,12 @@ from django.core.validators import (
 )
 from django.db import models
 
+from api.validators import validate_username
+from api_yamdb.constants import (
+    USERNAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    CONFIRMATION_CODE_MAX_LENGTH
+)
 
 class User(AbstractUser):
     class Role(models.TextChoices):
@@ -13,28 +19,32 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Администратор'
 
     bio = models.TextField('О себе', blank=True)
+    max_role_length = max(len(role.value) for role in Role)
     role = models.CharField(
         'Роль',
-        max_length=10,
+        max_length=max_role_length,
         choices=Role.choices,
         default=Role.USER,
     )
     email = models.EmailField(
         'Адрес электронной почты',
-        max_length=254,
+        max_length=EMAIL_MAX_LENGTH,
         unique=True,
     )
     username = models.CharField(
         'Имя пользователя',
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
             'Только буквы, цифры и @/./+/-/_.',
         ),
-        validators=(UnicodeUsernameValidator(),),
-        error_messages={
-            'unique': 'Пользователь с таким username уже существует.',
-        },
+        validators=[validate_username],
+    )
+    confirmation_code = models.CharField(
+        'Код подтверждения',
+        max_length=CONFIRMATION_CODE_MAX_LENGTH,
+        blank=True,
+        null=True
     )
 
     class Meta:
@@ -48,7 +58,7 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return (
-            self.role == self.Role.ADMIN or self.is_superuser
+            self.role == self.Role.ADMIN or self.is_staff or self.is_superuser
         )
 
     @property
