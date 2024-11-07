@@ -165,13 +165,11 @@ class TitleFilter(rest_framework.FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     filter_backends = (rest_framework.DjangoFilterBackend, )
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly, )
     http_method_names = ('get', 'post', 'patch', 'delete')
-
-    def get_queryset(self):
-        return Title.objects.annotate(rating=Avg('reviews__score'))
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
