@@ -5,7 +5,6 @@ from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.db.models import Avg
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -79,46 +78,31 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         )
 
 
-# class CategorySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Category
-#         fields = ('name', 'slug')
-
-
-# class GenreSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Genre
-#         fields = ('name', 'slug')
-
 class CategorySerializer(serializers.ModelSerializer):
-    slug = serializers.SlugField(
-        max_length=50,
-        validators=[UniqueValidator(queryset=Category.objects.all())],
-        error_messages={
-            'unique': "Эта категория уже существует.",
-        }
-    )
-
     class Meta:
         model = Category
         fields = ('name', 'slug')
 
 
 class GenreSerializer(serializers.ModelSerializer):
-    slug = serializers.SlugField(
-        max_length=50,
-        validators=[UniqueValidator(queryset=Genre.objects.all())],
-        error_messages={
-            'unique': "Этот жанр уже существует.",
-        }
-    )
-
     class Meta:
         model = Genre
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleReadSerializer(serializers.ModelSerializer):
+    genre = GenreSerializer(many=True, read_only=True)
+    category = CategorySerializer(read_only=True)
+    rating = serializers.FloatField(read_only=True)
+
+    class Meta:
+        model = Title
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
+
+
+class TitleWriteSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
@@ -128,62 +112,27 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Title
         fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+            'id', 'name', 'year', 'description', 'genre', 'category'
         )
 
     def validate_year(self, value):
         current_year = datetime.date.today().year
         if value > current_year:
             raise serializers.ValidationError(
-                'Год выпуска не может быть больше текущего года.'
+                'Год выпуска ({value}) не может быть больше '
+                'текущего года ({current_year}).'
             )
         return value
 
-    # def validate_name(self, value):
-    #     if len(value) > 256:
-    #         raise serializers.ValidationError(
-    #             'Название не должно быть больше 256 символов.'
-    #         )
-    #     return value
-
-    def get_rating(self, obj):
-        average_score = obj.reviews.aggregate(Avg('score'))['score__avg']
-        return round(average_score, 1) if average_score else None
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['genre'] = [
-            {
-                'name': genre.name, 'slug': genre.slug
-            } for genre in instance.genre.all()
-        ]
-        representation['category'] = {
-            'name': instance.category.name, 'slug': instance.category.slug
-        }
-        return representation
-    
-    # def to_representation(self, instance):
-        # representation = super().to_representation(instance)
-        # representation['genre'] = [
-        #     {'name': genre.name, 'slug': genre.slug}
-        #     for genre in instance.genre.all()
-        # ]
-        # if instance.category:
-        #     representation['category'] = {
-        #         'name': instance.category.name,
-        #         'slug': instance.category.slug
-        #     }
-        # return representation
-
 
 class ReviewSerializer(serializers.ModelSerializer):
-    title = serializers.HiddenField(
-        default=TitleSerializer()
+    title = serializers.PrimaryKeyRelatedField(
+        queryset=Title.objects.all(),
+        default=None
     )
     author = serializers.SlugRelatedField(
         slug_field='username',

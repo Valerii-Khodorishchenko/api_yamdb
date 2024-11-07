@@ -3,6 +3,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
+from django.db.models import Avg
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -19,7 +20,8 @@ from .serializers import (
     GenreSerializer,
     ReviewSerializer,
     TokenObtainSerializer,
-    TitleSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
     UserSerializer,
     UserSignUpSerializer
 )
@@ -131,62 +133,26 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
-# class CategoryViewSet(viewsets.ModelViewSet):
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-#     lookup_field = 'slug'
-#     filter_backends = (filters.SearchFilter,)
-#     search_fields = ('name',)
-#     permission_classes = (IsAdminOrReadOnly,)
-
-#     def retrieve(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-#     def partial_update(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-# class GenreViewSet(viewsets.ModelViewSet):
-#     queryset = Genre.objects.all()
-#     serializer_class = GenreSerializer
-#     lookup_field = 'slug'
-#     filter_backends = (filters.SearchFilter,)
-#     search_fields = ('name',)
-#     permission_classes = (IsAdminOrReadOnly,)
-
-#     def retrieve(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-#     def partial_update(self, request, *args, **kwargs):
-#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-
-class CategoryViewSet(
+class CategoryGenreMixin(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
+    lookup_field = 'slug'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = (IsAdminOrReadOnly,)
+
+
+class CategoryViewSet(CategoryGenreMixin):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    lookup_field = 'slug'
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    permission_classes = (IsAdminOrReadOnly,)
 
 
-class GenreViewSet(
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
+class GenreViewSet(CategoryGenreMixin):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    lookup_field = 'slug'
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    permission_classes = (IsAdminOrReadOnly,)
 
 
 class TitleFilter(rest_framework.FilterSet):
@@ -199,12 +165,18 @@ class TitleFilter(rest_framework.FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializer
     filter_backends = (rest_framework.DjangoFilterBackend, )
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly, )
     http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_queryset(self):
+        return Title.objects.annotate(rating=Avg('reviews__score'))
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

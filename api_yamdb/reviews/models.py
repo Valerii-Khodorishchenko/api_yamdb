@@ -1,9 +1,11 @@
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import (
     EmailValidator, MaxValueValidator, MinValueValidator
 )
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -56,7 +58,7 @@ class User(AbstractUser):
         return self.role == self.Role.MODERATOR
 
 
-class Category(models.Model):
+class CategoryGenreBaseModel(models.Model):
     name = models.CharField('Название', max_length=256)
     slug = models.SlugField(
         'Идентификатор',
@@ -64,28 +66,23 @@ class Category(models.Model):
         unique=True
     )
 
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.name[:26]
+
+
+class Category(CategoryGenreBaseModel):
     class Meta:
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
-    def __str__(self):
-        return self.name[:26]
 
-
-class Genre(models.Model):
-    name = models.CharField('Название', max_length=256)
-    slug = models.SlugField(
-        'Идентификатор',
-        max_length=50,
-        unique=True
-    )
-
+class Genre(CategoryGenreBaseModel):
     class Meta:
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
-
-    def __str__(self):
-        return self.name[:26]
 
 
 class Title(models.Model):
@@ -93,10 +90,9 @@ class Title(models.Model):
     year = models.PositiveIntegerField('Год')
     description = models.TextField(
         'Описание произведения',
-        null=True,
-        max_length=256
+        null=True
     )
-    genre = models.ManyToManyField(Genre, verbose_name='Жанр')
+    genre = models.ManyToManyField(Genre, verbose_name='Жанры')
     description = models.TextField('Описание', blank=True)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL,
@@ -104,9 +100,18 @@ class Title(models.Model):
     )
 
     class Meta:
+        ordering = ('-year', 'name')
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
+
+    def clean(self):
+        current_year = timezone.now().year
+        if self.year > current_year:
+            raise ValidationError(
+                'Год выпуска ({value}) не может быть больше '
+                'текущего года ({current_year}).'
+            )
 
     def __str__(self):
         return self.name[:26]
