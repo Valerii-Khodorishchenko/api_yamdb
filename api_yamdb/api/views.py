@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (
     IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
+from rest_framework_simplejwt.tokens import AccessToken
 
 from api.serializers import (
     CategorySerializer,
