@@ -6,12 +6,12 @@ from django.utils import timezone
 
 from api.validators import validate_username
 from api_yamdb.constants import (
-    USERNAME_MAX_LENGTH,
-    EMAIL_MAX_LENGTH,
     CONFIRMATION_CODE_MAX_LENGTH,
-    SCORE,
+    EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
-    SLUG_MAX_LENGTH
+    SCORE,
+    SLUG_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
 )
 
 

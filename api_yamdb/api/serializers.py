@@ -2,11 +2,9 @@ import datetime
 
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.validators import UniqueValidator
 from django.shortcuts import get_object_or_404
 
-from reviews.models import Category, Comment, BaseNameSlugModel, Genre, Review, Title, User
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -118,6 +116,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
+    
     class Meta:
         model = Title
         fields = (
