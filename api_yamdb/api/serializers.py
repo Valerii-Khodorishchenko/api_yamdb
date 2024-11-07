@@ -1,10 +1,10 @@
 import datetime
 
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
-from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.validators import UnicodeUsernameValidator
+from rest_framework_simplejwt.tokens import AccessToken
+from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -23,59 +23,57 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
 
-class UserSignUpSerializer(serializers.ModelSerializer):
+class CurrentUserSerializer(UserSerializer):
+
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ('role',)
+
+
+class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=150,
+        max_length=User._meta.get_field('username').max_length,
         required=True,
-        validators=(UnicodeUsernameValidator(),),
+        validators=User._meta.get_field('username').validators,
     )
-    email = serializers.EmailField(max_length=254, required=True)
+    email = serializers.EmailField(
+        max_length=User._meta.get_field('email').max_length,
+        required=True,
+    )
 
-    class Meta:
-        model = User
-        fields = ('email', 'username')
-
-    def validate_username(self, value):
-        if value.lower() == 'me':
+    def validate(self, data):
+        username = data['username']
+        email = data['email']
+        if (
+            User.objects.filter(email=email)
+            .exclude(username=username)
+            .exists()
+        ):
             raise serializers.ValidationError(
-                'Использование "me" в качестве имени пользователя запрещено.'
+                {'email': 'Пользователь с таким email уже существует.'}
             )
-        return value
+        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    confirmation_code = serializers.CharField()
+    username = serializers.CharField(
+        max_length=User._meta.get_field('username').max_length,
+        required=True,
+    )
+    confirmation_code = serializers.CharField(
+        max_length=User._meta.get_field('confirmation_code').max_length,
+        required=True,
+    )
 
     def validate(self, attrs):
         username = attrs.get('username')
         confirmation_code = attrs.get('confirmation_code')
-        user = User.objects.filter(username=username).first()
-        if user is None:
-            raise NotFound(
-                'Пользователь с таким именем не существует.'
-            )
-        if not default_token_generator.check_token(user, confirmation_code):
+        user = get_object_or_404(User, username=username)
+        if user.confirmation_code != confirmation_code:
             raise serializers.ValidationError(
-                'Неверный код подтверждения.'
+                {'confirmation_code': 'Неверный код подтверждения.'}
             )
-        attrs['user'] = user
-        return attrs
-
-
-class CurrentUserSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = User
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'bio',
-            'role',
-        )
+        token = AccessToken.for_user(user)
+        return {'token': str(token)}
 
 
 class CategorySerializer(serializers.ModelSerializer):
