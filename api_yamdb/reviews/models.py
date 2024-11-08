@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api.validators import validate_username
+from api.validators import validate_username, validate_year
 from api_yamdb.constants import (
     CONFIRMATION_CODE_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
@@ -99,7 +99,9 @@ class Genre(BaseNameSlugModel):
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
-    year = models.PositiveIntegerField('Год выпуска')
+    year = models.PositiveIntegerField(
+        'Год выпуска', validators=[validate_year]
+    )
     description = models.TextField(
         'Описание',
         null=True
@@ -115,14 +117,6 @@ class Title(models.Model):
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
-
-    def clean(self):
-        current_year = timezone.now().year
-        if self.year > current_year:
-            raise ValidationError(
-                'Год выпуска ({value}) не может быть больше '
-                'текущего года ({current_year}).'
-            )
 
     def __str__(self):
         return self.name[:26]

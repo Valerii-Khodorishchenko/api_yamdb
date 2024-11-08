@@ -134,7 +134,9 @@ class TitleFilter(rest_framework.FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.annotate(
+        rating=Avg('reviews__score')
+    ).order_by(*Title._meta.ordering)
     filter_backends = (rest_framework.DjangoFilterBackend, )
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly, )

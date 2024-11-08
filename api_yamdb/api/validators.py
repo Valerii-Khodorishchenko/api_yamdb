@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from django.core.exceptions import ValidationError
@@ -18,3 +19,13 @@ def validate_username(username):
             f'Имя пользователя содержит недопустимые символы: {invalid_chars}'
         )
     return username
+
+
+def validate_year(year):
+    current_year = datetime.date.today().year
+    if year > current_year:
+        raise ValidationError(
+            f'Год выпуска ({year}) не может быть больше '
+            f'текущего года ({current_year}).'
+        )
+    return year
