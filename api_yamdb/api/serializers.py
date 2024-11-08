@@ -1,17 +1,16 @@
-import datetime
-
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
+from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from reviews.validators import validate_username
+from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        max_length=settings.USERNAME_MAX_LENGTH,
+        max_length=USERNAME_MAX_LENGTH,
         validators=[
             validate_username,
             UniqueValidator(
@@ -22,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
         required=True,
     )
     email = serializers.EmailField(
-        max_length=settings.EMAIL_MAX_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
         validators=[
             UniqueValidator(
                 queryset=User.objects.all(),
@@ -51,19 +50,19 @@ class CurrentUserSerializer(UserSerializer):
 
 class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=settings.USERNAME_MAX_LENGTH,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
         validators=[validate_username],
     )
     email = serializers.EmailField(
-        max_length=settings.EMAIL_MAX_LENGTH,
-        required=True
+        max_length=EMAIL_MAX_LENGTH,
+        required=True,
     )
 
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=settings.USERNAME_MAX_LENGTH,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
     )
     confirmation_code = serializers.CharField(
@@ -114,13 +113,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         )
 
     def validate_year(self, value):
-        current_year = datetime.date.today().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выпуска ({value}) не может быть больше '
-                'текущего года ({current_year}).'
-            )
-        return value
+        return validate_year(value)
+
+    def to_representation(self, title):
+        return TitleReadSerializer(title).data
 
 
 class BaseAuthorSerializer(serializers.ModelSerializer):
@@ -139,7 +135,7 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']) and request.method == 'POST':
+        if (request := self.context['request']).method == 'POST':
             if Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()

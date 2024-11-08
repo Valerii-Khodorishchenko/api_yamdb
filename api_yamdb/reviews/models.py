@@ -3,9 +3,16 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils import timezone
 
-from reviews.validators import validate_username
+from reviews.constants import (
+    EMAIL_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+    DESCRIPTION_LENGTH,
+    SLUG_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    SCORE
+)
+from reviews.validators import validate_username, validate_year
 
 
 class User(AbstractUser):
@@ -27,11 +34,11 @@ class User(AbstractUser):
         unique=True,
     )
     username = models.CharField(
-        'Имя пользователя',
-        max_length=settings.USERNAME_MAX_LENGTH,
+        'username',
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите имя пользователя.'
+            'Укажите username пользователя.',
         ),
         validators=[validate_username],
     )
@@ -48,12 +55,11 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username
+        return self.username[:DESCRIPTION_LENGTH]
 
     @property
     def is_admin(self):
         return (
-
             self.role == self.Role.ADMIN or self.is_staff
         )
 
@@ -74,7 +80,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class Category(BaseNameSlugModel):
@@ -90,8 +96,10 @@ class Genre(BaseNameSlugModel):
 
 
 class Title(models.Model):
-    name = models.CharField('Название', max_length=settings.NAME_MAX_LENGTH)
-    year = models.PositiveIntegerField('Год выпуска')
+    name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
+    year = models.PositiveIntegerField(
+        'Год выпуска', validators=[validate_year]
+    )
     description = models.TextField(
         'Описание',
         null=True
@@ -108,32 +116,29 @@ class Title(models.Model):
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
 
-    def clean(self):
-        current_year = timezone.now().year
-        if self.year > current_year:
-            raise ValidationError(
-                'Год выпуска ({value}) не может быть больше '
-                'текущего года ({current_year}).'
-            )
-
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
-class BaseContentReviewComment(models.Model):
+class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
-        'User', on_delete=models.CASCADE,
-        verbose_name='Автор'
+        User, on_delete=models.CASCADE,
+        verbose_name='Автор', related_name='%(class)s_author'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
     class Meta:
         abstract = True
         ordering = ('-pub_date',)
+        default_related_name = '%(class)ss'
+
+    def __str__(self):
+        return (f'{self.__class__.__name__}'
+                f' от {self.author}')[:DESCRIPTION_LENGTH]
 
 
-class Review(BaseContentReviewComment):
+class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
         validators=[
@@ -146,30 +151,34 @@ class Review(BaseContentReviewComment):
         ]
     )
     title = models.ForeignKey(
-        'Title', on_delete=models.CASCADE,
-        verbose_name='Произведение'
+        Title, on_delete=models.CASCADE,
+        verbose_name='Произведение',
     )
 
-    class Meta(BaseContentReviewComment.Meta):
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
-        default_related_name = 'reviews'
-        unique_together = ('author', 'title')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'title'],
+                name='unique_review'
+            )
+        ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'
+        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
 
 
-class Comment(BaseContentReviewComment):
+class Comment(BaseContentModel):
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE,
-        verbose_name='Отзыв'
+        verbose_name='Отзыв',
     )
 
-    class Meta(BaseContentReviewComment.Meta):
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        default_related_name = 'comments'
 
     def __str__(self):
-        return f'{self.author} прокомментировал {self.review}'
+        return (f'{self.author} '
+                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]

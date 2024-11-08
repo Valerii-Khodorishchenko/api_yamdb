@@ -8,8 +8,8 @@ from api.views import (
     ReviewViewSet,
     TitleViewSet,
     TokenView,
+    SignUpView,
     UserViewSet,
-    SignUpView
 )
 
 
