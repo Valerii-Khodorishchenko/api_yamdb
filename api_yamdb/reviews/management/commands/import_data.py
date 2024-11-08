@@ -2,7 +2,7 @@ from csv import DictReader
 
 from django.core.management.base import BaseCommand
 
-from  reviews.models import Category, Genre, Title, Review, Comment, User
+from reviews.models import Category, Genre, Title, Review, Comment, User
 
 
 data_files = [
@@ -64,7 +64,6 @@ class Command(BaseCommand):
     help = 'Загрузить данные из CSV-файлов в БД'
 
     def handle(self, *args, **kwargs):
-
         for data_file in data_files:
             model = data_file['model']
             print(f'Загрузка данных в таблицу {model.__name__}...')
@@ -84,7 +83,6 @@ class Command(BaseCommand):
                                     )
                                 )
                         model.objects.create(**obj_data)
-
                     except Exception as e:
                         print(
                             f'Ошибка при загрузке в таблицу {model.__name__} '

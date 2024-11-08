@@ -22,7 +22,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CurrentUserSerializer(UserSerializer):
-
     class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
 
@@ -117,7 +116,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    
+
     class Meta:
         model = Title
         fields = (
