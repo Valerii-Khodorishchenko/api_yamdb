@@ -1,15 +1,14 @@
 import datetime
 import re
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
-
-from api_yamdb.constants import RESERVED_NAME
 
 
 def validate_username(username):
-    if username == RESERVED_NAME:
+    if username == settings.RESERVED_NAME:
         raise ValidationError(
-            f'Использование "{RESERVED_NAME}" '
+            f'Использование "{settings.RESERVED_NAME}" '
             'в качестве имени пользователя запрещено.'
         )
     regex = re.compile(r'^[\w.@+-]+$')

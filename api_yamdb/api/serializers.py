@@ -1,9 +1,11 @@
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
 
+from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .validators import validate_year
+from reviews.validators import validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -27,12 +29,12 @@ class CurrentUserSerializer(UserSerializer):
 
 class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
         validators=User._meta.get_field('username').validators,
     )
     email = serializers.EmailField(
-        max_length=User._meta.get_field('email').max_length,
+        max_length=EMAIL_MAX_LENGTH,
         required=True,
     )
 
@@ -60,11 +62,11 @@ class UserSignUpSerializer(serializers.Serializer):
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
     )
     confirmation_code = serializers.CharField(
-        max_length=User._meta.get_field('confirmation_code').max_length,
+        max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         required=True,
     )
 
@@ -145,7 +147,7 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']) and request.method == 'POST':
+        if (request := self.context['request']).method == 'POST':
             if Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()

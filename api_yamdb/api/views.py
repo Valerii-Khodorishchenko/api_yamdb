@@ -9,7 +9,7 @@ from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (
-    IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.serializers import (
@@ -26,7 +26,6 @@ from api.serializers import (
 )
 from api.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin)
-from api_yamdb.constants import RESERVED_NAME
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -52,11 +51,14 @@ class AuthViewSet(viewsets.GenericViewSet):
     def signup(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
-        user, created = User.objects.get_or_create(username=username)
-        user.email = email
-        confirmation_code = str(random.randint(100000, 999999))
+        user, created = User.objects.get_or_create(
+            username=serializer.validated_data['username'],
+            email=serializer.validated_data['email']
+        )
+        confirmation_code = ''.join(random.choices(
+            settings.CONFIRMATION_CODE_CHARS,
+            k=settings.CONFIRMATION_CODE_MAX_LENGTH
+        ))
         user.confirmation_code = confirmation_code
         user.save()
         send_confirmation_code(user, confirmation_code)
@@ -89,8 +91,7 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
-
-        url_path=RESERVED_NAME,
+        url_path=settings.RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )
     def update_user(self, request):
