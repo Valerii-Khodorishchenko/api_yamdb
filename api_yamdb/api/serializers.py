@@ -53,33 +53,12 @@ class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
         required=True,
-        validators=User._meta.get_field('username').validators,
+        validators=[validate_username],
     )
     email = serializers.EmailField(
         max_length=EMAIL_MAX_LENGTH,
         required=True,
     )
-
-    def validate(self, data):
-        username = data['username']
-        email = data['email']
-        user_qs = User.objects.filter(username=username)
-        if user_qs.exists():
-            user = user_qs.first()
-            if user.email != email:
-                raise serializers.ValidationError(
-                    {'email': 'Email не совпадает.'},
-                    {'username': 'Пользователь с таким именем существует.'},
-                )
-        if (
-            User.objects.filter(email=email)
-            .exclude(username=username)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                {'email': 'Пользователь с таким email уже существует.'}
-            )
-        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
@@ -91,18 +70,6 @@ class TokenObtainSerializer(serializers.Serializer):
         max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         required=True,
     )
-
-    def validate(self, attrs):
-        username = attrs.get('username')
-        confirmation_code = attrs.get('confirmation_code')
-
-        user = get_object_or_404(User, username=username)
-        if user.confirmation_code != confirmation_code:
-            raise serializers.ValidationError(
-                {'confirmation_code': 'Неверный код подтверждения.'}
-            )
-        attrs['user'] = user
-        return attrs
 
 
 class CategorySerializer(serializers.ModelSerializer):
