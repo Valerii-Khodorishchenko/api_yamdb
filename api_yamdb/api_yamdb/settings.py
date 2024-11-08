@@ -112,3 +112,15 @@ AUTH_USER_MODEL = 'reviews.User'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_FROM_EMAIL = 'No-reply <yamdb@no-reply.ru>'
+
+RESERVED_NAME = 'me'
+USERNAME_MAX_LENGTH = 150
+NAME_MAX_LENGTH = 256
+SLUG_MAX_LENGTH = 50
+EMAIL_MAX_LENGTH = 254
+CONFIRMATION_CODE_MAX_LENGTH = 6
+CONFIRMATION_CODE_ALLOWED_CHARS = '0123456789'
+SCORE = {
+    'min': 1, 'max': 10,
+    'message': 'Рейтинг должен быть в диапазоне от 1 до 10.'
+}

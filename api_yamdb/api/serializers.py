@@ -1,13 +1,36 @@
 import datetime
 
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
+from rest_framework.validators import UniqueValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from reviews.validators import validate_username
 
 
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=settings.USERNAME_MAX_LENGTH,
+        validators=[
+            validate_username,
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message='Пользователь с таким именем уже существует.'
+            )
+        ],
+        required=True,
+    )
+    email = serializers.EmailField(
+        max_length=settings.EMAIL_MAX_LENGTH,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message='Пользователь с таким email уже существует.'
+            )
+        ],
+        required=True,
+    )
 
     class Meta:
         model = User
@@ -28,58 +51,25 @@ class CurrentUserSerializer(UserSerializer):
 
 class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=settings.USERNAME_MAX_LENGTH,
         required=True,
-        validators=User._meta.get_field('username').validators,
+        validators=[validate_username],
     )
     email = serializers.EmailField(
-        max_length=User._meta.get_field('email').max_length,
-        required=True,
+        max_length=settings.EMAIL_MAX_LENGTH,
+        required=True
     )
-
-    def validate(self, data):
-        username = data['username']
-        email = data['email']
-        user_qs = User.objects.filter(username=username)
-        if user_qs.exists():
-            user = user_qs.first()
-            if user.email != email:
-                raise serializers.ValidationError(
-                    {'email': 'Email не совпадает.'},
-                    {'username': 'Пользователь с таким именем существует.'},
-                )
-        if (
-            User.objects.filter(email=email)
-            .exclude(username=username)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                {'email': 'Пользователь с таким email уже существует.'}
-            )
-        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=settings.USERNAME_MAX_LENGTH,
         required=True,
     )
     confirmation_code = serializers.CharField(
-        max_length=User._meta.get_field('confirmation_code').max_length,
+        max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         required=True,
     )
-
-    def validate(self, attrs):
-        username = attrs.get('username')
-        confirmation_code = attrs.get('confirmation_code')
-
-        user = get_object_or_404(User, username=username)
-        if user.confirmation_code != confirmation_code:
-            raise serializers.ValidationError(
-                {'confirmation_code': 'Неверный код подтверждения.'}
-            )
-        attrs['user'] = user
-        return attrs
 
 
 class CategorySerializer(serializers.ModelSerializer):

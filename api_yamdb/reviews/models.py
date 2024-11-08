@@ -1,18 +1,11 @@
-from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from api.validators import validate_username
-from api_yamdb.constants import (
-    CONFIRMATION_CODE_MAX_LENGTH,
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    SCORE,
-    SLUG_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-)
+from reviews.validators import validate_username
 
 
 class User(AbstractUser):
@@ -22,30 +15,29 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Администратор'
 
     bio = models.TextField('О себе', blank=True)
-    max_role_length = max(len(role.value) for role in Role)
     role = models.CharField(
         'Роль',
-        max_length=max_role_length,
+        max_length=max(len(role.value) for role in Role),
         choices=Role.choices,
         default=Role.USER,
     )
     email = models.EmailField(
         'Адрес электронной почты',
-        max_length=EMAIL_MAX_LENGTH,
+        max_length=settings.EMAIL_MAX_LENGTH,
         unique=True,
     )
     username = models.CharField(
         'Имя пользователя',
-        max_length=USERNAME_MAX_LENGTH,
+        max_length=settings.USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Только буквы, цифры и @/./+/-/_.',
+            'Укажите имя пользователя.'
         ),
         validators=[validate_username],
     )
     confirmation_code = models.CharField(
         'Код подтверждения',
-        max_length=CONFIRMATION_CODE_MAX_LENGTH,
+        max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         blank=True,
         null=True
     )
@@ -62,7 +54,7 @@ class User(AbstractUser):
     def is_admin(self):
         return (
 
-            self.role == self.Role.ADMIN or self.is_staff or self.is_superuser
+            self.role == self.Role.ADMIN or self.is_staff
         )
 
     @property
@@ -71,10 +63,10 @@ class User(AbstractUser):
 
 
 class BaseNameSlugModel(models.Model):
-    name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
+    name = models.CharField('Название', max_length=settings.NAME_MAX_LENGTH)
     slug = models.SlugField(
         'Идентификатор',
-        max_length=SLUG_MAX_LENGTH,
+        max_length=settings.SLUG_MAX_LENGTH,
         unique=True
     )
 
@@ -98,7 +90,7 @@ class Genre(BaseNameSlugModel):
 
 
 class Title(models.Model):
-    name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
+    name = models.CharField('Название', max_length=settings.NAME_MAX_LENGTH)
     year = models.PositiveIntegerField('Год выпуска')
     description = models.TextField(
         'Описание',
@@ -145,8 +137,12 @@ class Review(BaseContentReviewComment):
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
         validators=[
-            MinValueValidator(SCORE['min'], message=SCORE['message']),
-            MaxValueValidator(SCORE['max'], message=SCORE['message'])
+            MinValueValidator(
+                settings.SCORE['min'], message=settings.SCORE['message']
+            ),
+            MaxValueValidator(
+                settings.SCORE['max'], message=settings.SCORE['message']
+            )
         ]
     )
     title = models.ForeignKey(
