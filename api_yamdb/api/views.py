@@ -80,16 +80,18 @@ class TokenView(views.APIView):
     def post(self, request):
         serializer = TokenObtainSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
         confirmation_code = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(User, username=username)
+        user = get_object_or_404(
+            User, username=serializer.validated_data['username'])
         if user.confirmation_code != confirmation_code:
             return Response(
                 {'confirmation_code': ['Неверный код подтверждения.']},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        token = AccessToken.for_user(user)
-        return Response({'token': str(token)}, status=status.HTTP_200_OK)
+        return Response(
+            {'token': str(AccessToken.for_user(user))},
+            status=status.HTTP_200_OK
+        )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -157,9 +159,9 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(
         rating=Avg('reviews__score')
     ).order_by(*Title._meta.ordering)
-    filter_backends = (rest_framework.DjangoFilterBackend, )
+    filter_backends = (rest_framework.DjangoFilterBackend,)
     filterset_class = TitleFilter
-    permission_classes = (IsAdminOrReadOnly, )
+    permission_classes = (IsAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_serializer_class(self):

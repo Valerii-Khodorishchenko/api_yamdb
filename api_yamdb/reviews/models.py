@@ -4,6 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from reviews.constants import (
+    DESCRIPTION_LENGTH,
     EMAIL_MAX_LENGTH,
     NAME_MAX_LENGTH,
     SCORE,
@@ -32,11 +33,11 @@ class User(AbstractUser):
         unique=True,
     )
     username = models.CharField(
-        'Имя пользователя',
+        'username',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите имя пользователя.',
+            'Укажите username пользователя.',
         ),
         validators=[validate_username],
     )
@@ -53,7 +54,7 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username
+        return self.username[:DESCRIPTION_LENGTH]
 
     @property
     def is_admin(self):
@@ -78,7 +79,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class Category(BaseNameSlugModel):
@@ -115,7 +116,7 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class BaseContent(models.Model):
@@ -132,7 +133,8 @@ class BaseContent(models.Model):
         default_related_name = '%(class)ss'
 
     def __str__(self):
-        return f'{self.__class__.__name__} от {self.author}'
+        return (f'{self.__class__.__name__}'
+                f' от {self.author}')[:DESCRIPTION_LENGTH]
 
 
 class Review(BaseContent):
@@ -159,7 +161,7 @@ class Review(BaseContent):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'
+        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
 
 
 class Comment(BaseContent):
@@ -173,4 +175,5 @@ class Comment(BaseContent):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return f'{self.author} прокомментировал {self.review}'
+        return (f'{self.author} '
+                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]
