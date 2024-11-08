@@ -1,4 +1,4 @@
-from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -14,6 +14,16 @@ from api_yamdb.constants import (
     USERNAME_MAX_LENGTH,
 )
 
+from reviews.constants import (
+    DESCRIPTION_LENGTH,
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    SCORE,
+    SLUG_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
+from reviews.validators import validate_username, validate_year
+
 
 class User(AbstractUser):
     class Role(models.TextChoices):
@@ -25,7 +35,7 @@ class User(AbstractUser):
     max_role_length = max(len(role.value) for role in Role)
     role = models.CharField(
         'Роль',
-        max_length=max_role_length,
+        max_length=max(len(role.value) for role in Role),
         choices=Role.choices,
         default=Role.USER,
     )
@@ -35,17 +45,18 @@ class User(AbstractUser):
         unique=True,
     )
     username = models.CharField(
-        'Имя пользователя',
+        'username',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Только буквы, цифры и @/./+/-/_.',
+            'Укажите username пользователя.',
         ),
         validators=[validate_username],
     )
     confirmation_code = models.CharField(
         'Код подтверждения',
-        max_length=CONFIRMATION_CODE_MAX_LENGTH,
+
+        max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         blank=True,
         null=True
     )
@@ -56,13 +67,12 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username
+        return self.username[:DESCRIPTION_LENGTH]
 
     @property
     def is_admin(self):
         return (
-
-            self.role == self.Role.ADMIN or self.is_staff or self.is_superuser
+            self.role == self.Role.ADMIN or self.is_staff
         )
 
     @property
@@ -82,7 +92,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class Category(BaseNameSlugModel):
@@ -99,7 +109,9 @@ class Genre(BaseNameSlugModel):
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
-    year = models.PositiveIntegerField('Год выпуска')
+    year = models.PositiveIntegerField(
+        'Год выпуска', validators=[validate_year]
+    )
     description = models.TextField(
         'Описание',
         null=True
@@ -125,23 +137,28 @@ class Title(models.Model):
             )
 
     def __str__(self):
-        return self.name[:26]
+        return self.name[:DESCRIPTION_LENGTH]
 
 
-class BaseContentReviewComment(models.Model):
+class BaseContent(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
-        'User', on_delete=models.CASCADE,
-        verbose_name='Автор'
+        User, on_delete=models.CASCADE,
+        verbose_name='Автор', related_name='%(class)s_author'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
     class Meta:
         abstract = True
         ordering = ('-pub_date',)
+        default_related_name = '%(class)ss'
+
+    def __str__(self):
+        return (f'{self.__class__.__name__}'
+                f' от {self.author}')[:DESCRIPTION_LENGTH]
 
 
-class Review(BaseContentReviewComment):
+class Review(BaseContent):
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
         validators=[
@@ -150,30 +167,34 @@ class Review(BaseContentReviewComment):
         ]
     )
     title = models.ForeignKey(
-        'Title', on_delete=models.CASCADE,
-        verbose_name='Произведение'
+        Title, on_delete=models.CASCADE,
+        verbose_name='Произведение',
     )
 
-    class Meta(BaseContentReviewComment.Meta):
+    class Meta(BaseContent.Meta):
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
-        default_related_name = 'reviews'
-        unique_together = ('author', 'title')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'title'],
+                name='unique_review'
+            )
+        ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'
+        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
 
 
-class Comment(BaseContentReviewComment):
+class Comment(BaseContent):
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE,
-        verbose_name='Отзыв'
+        verbose_name='Отзыв',
     )
 
-    class Meta(BaseContentReviewComment.Meta):
+    class Meta(BaseContent.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
-        default_related_name = 'comments'
 
     def __str__(self):
-        return f'{self.author} прокомментировал {self.review}'
+        return (f'{self.author} '
+                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]

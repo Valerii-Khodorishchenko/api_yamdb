@@ -1,13 +1,35 @@
-import datetime
-
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
+from rest_framework.validators import UniqueValidator
 
+from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=USERNAME_MAX_LENGTH,
+        validators=[
+            validate_username,
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message='Пользователь с таким именем уже существует.'
+            )
+        ],
+        required=True,
+    )
+    email = serializers.EmailField(
+        max_length=EMAIL_MAX_LENGTH,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message='Пользователь с таким email уже существует.'
+            )
+        ],
+        required=True,
+    )
 
     class Meta:
         model = User
@@ -22,65 +44,31 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CurrentUserSerializer(UserSerializer):
-
     class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
 
 
 class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
-        validators=User._meta.get_field('username').validators,
+        validators=[validate_username],
     )
     email = serializers.EmailField(
-        max_length=User._meta.get_field('email').max_length,
+        max_length=EMAIL_MAX_LENGTH,
         required=True,
     )
-
-    def validate(self, data):
-        username = data['username']
-        email = data['email']
-        user_qs = User.objects.filter(username=username)
-        if user_qs.exists():
-            user = user_qs.first()
-            if user.email != email:
-                raise serializers.ValidationError(
-                    {'email': 'Email не совпадает.'},
-                    {'username': 'Пользователь с таким именем существует.'},
-                )
-        if (
-            User.objects.filter(email=email)
-            .exclude(username=username)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                {'email': 'Пользователь с таким email уже существует.'}
-            )
-        return data
 
 
 class TokenObtainSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=User._meta.get_field('username').max_length,
+        max_length=USERNAME_MAX_LENGTH,
         required=True,
     )
     confirmation_code = serializers.CharField(
-        max_length=User._meta.get_field('confirmation_code').max_length,
+        max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         required=True,
     )
-
-    def validate(self, attrs):
-        username = attrs.get('username')
-        confirmation_code = attrs.get('confirmation_code')
-
-        user = get_object_or_404(User, username=username)
-        if user.confirmation_code != confirmation_code:
-            raise serializers.ValidationError(
-                {'confirmation_code': 'Неверный код подтверждения.'}
-            )
-        attrs['user'] = user
-        return attrs
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -125,13 +113,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         )
 
     def validate_year(self, value):
-        current_year = datetime.date.today().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выпуска ({value}) не может быть больше '
-                'текущего года ({current_year}).'
-            )
-        return value
+        return validate_year(value)
+
+    def to_representation(self, title):
+        return TitleReadSerializer(title).data
 
 
 class BaseAuthorSerializer(serializers.ModelSerializer):
@@ -150,7 +135,7 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']) and request.method == 'POST':
+        if (request := self.context['request']).method == 'POST':
             if Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()

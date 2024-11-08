@@ -112,3 +112,8 @@ AUTH_USER_MODEL = 'reviews.User'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_FROM_EMAIL = 'No-reply <yamdb@no-reply.ru>'
+
+RESERVED_NAME = 'me'
+
+CONFIRMATION_CODE_MAX_LENGTH = 6
+CONFIRMATION_CODE_CHARS = "0123456789"

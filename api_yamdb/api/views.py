@@ -5,11 +5,11 @@ from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
-from rest_framework import filters, mixins, status, viewsets
+from rest_framework import filters, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import (
-    IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly)
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.serializers import (
@@ -40,40 +40,59 @@ def send_confirmation_code(user, confirmation_code):
     )
 
 
-class AuthViewSet(viewsets.GenericViewSet):
+def get_random_code():
+    length = settings.CONFIRMATION_CODE_MAX_LENGTH
+    allowed_chars = settings.CONFIRMATION_CODE_CHARS
+    return ''.join(random.choices(allowed_chars, k=length))
+
+
+class SignUpView(views.APIView):
     permission_classes = (AllowAny,)
 
-    @action(
-        detail=False,
-        methods=['post'],
-        url_path='signup',
-        serializer_class=UserSignUpSerializer
-    )
-    def signup(self, request):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request):
+        serializer = UserSignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data['username']
         email = serializer.validated_data['email']
-        user, created = User.objects.get_or_create(username=username)
-        user.email = email
-        confirmation_code = str(random.randint(100000, 999999))
+        user = User.objects.filter(username=username).first()
+        if user:
+            if user.email != email:
+                return Response(
+                    {'email': ['Email не совпадает.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {'email': ['Пользователь с таким email уже существует.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user = User.objects.create_user(username=username, email=email)
+        confirmation_code = get_random_code()
         user.confirmation_code = confirmation_code
         user.save()
         send_confirmation_code(user, confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(
-        detail=False,
-        methods=('post',),
-        url_path='token',
-        serializer_class=TokenObtainSerializer
-    )
-    def get_token(self, request):
-        serializer = self.get_serializer(data=request.data)
+
+class TokenView(views.APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = TokenObtainSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token = AccessToken.for_user(user)
-        return Response({'token': str(token)}, status=status.HTTP_200_OK)
+        confirmation_code = serializer.validated_data['confirmation_code']
+        user = get_object_or_404(
+            User, username=serializer.validated_data['username'])
+        if user.confirmation_code != confirmation_code:
+            return Response(
+                {'confirmation_code': ['Неверный код подтверждения.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            {'token': str(AccessToken.for_user(user))},
+            status=status.HTTP_200_OK
+        )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -89,17 +108,20 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
-
-        url_path=RESERVED_NAME,
+        url_path=settings.RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )
-    def update_user(self, request):
-        serializer = self.get_serializer(
-            request.user, data=request.data, partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+    def get_current_user(self, request):
+        if request.method == 'GET':
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+        elif request.method == 'PATCH':
+            serializer = self.get_serializer(
+                request.user, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
 
 class CategoryGenreMixin(
@@ -134,10 +156,12 @@ class TitleFilter(rest_framework.FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    filter_backends = (rest_framework.DjangoFilterBackend, )
+    queryset = Title.objects.annotate(
+        rating=Avg('reviews__score')
+    ).order_by(*Title._meta.ordering)
+    filter_backends = (rest_framework.DjangoFilterBackend,)
     filterset_class = TitleFilter
-    permission_classes = (IsAdminOrReadOnly, )
+    permission_classes = (IsAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_serializer_class(self):
