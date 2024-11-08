@@ -12,10 +12,9 @@ def validate_username(username):
             'в качестве имени пользователя запрещено.'
         )
     regex = re.compile(r'^[\w.@+-]+$')
-    if not regex.match(username):
-        invalid_chars = ''.join(set(username) - set(regex.pattern))
+    if not re.match(regex, username):
         raise ValidationError(
-            f'Имя пользователя содержит недопустимые символы: {invalid_chars}'
+            'Имя пользователя содержит недопустимые символы.'
         )
     return username
 

@@ -36,7 +36,7 @@ class User(AbstractUser):
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Только буквы, цифры и @/./+/-/_.',
+            'Укажите имя пользователя.',
         ),
         validators=[validate_username],
     )
