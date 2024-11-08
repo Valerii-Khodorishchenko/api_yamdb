@@ -2,25 +2,14 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils import timezone
-
-from api.validators import validate_username
-from api_yamdb.constants import (
-    CONFIRMATION_CODE_MAX_LENGTH,
-    EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    SCORE,
-    SLUG_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-)
 
 from reviews.constants import (
-    DESCRIPTION_LENGTH,
     EMAIL_MAX_LENGTH,
-    NAME_MAX_LENGTH,
-    SCORE,
-    SLUG_MAX_LENGTH,
     USERNAME_MAX_LENGTH,
+    DESCRIPTION_LENGTH,
+    SLUG_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    SCORE
 )
 from reviews.validators import validate_username, validate_year
 
@@ -32,7 +21,6 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Администратор'
 
     bio = models.TextField('О себе', blank=True)
-    max_role_length = max(len(role.value) for role in Role)
     role = models.CharField(
         'Роль',
         max_length=max(len(role.value) for role in Role),
@@ -128,19 +116,11 @@ class Title(models.Model):
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
 
-    def clean(self):
-        current_year = timezone.now().year
-        if self.year > current_year:
-            raise ValidationError(
-                'Год выпуска ({value}) не может быть больше '
-                'текущего года ({current_year}).'
-            )
-
     def __str__(self):
         return self.name[:DESCRIPTION_LENGTH]
 
 
-class BaseContent(models.Model):
+class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
@@ -158,7 +138,7 @@ class BaseContent(models.Model):
                 f' от {self.author}')[:DESCRIPTION_LENGTH]
 
 
-class Review(BaseContent):
+class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
         'Рейтинг',
         validators=[
@@ -171,7 +151,7 @@ class Review(BaseContent):
         verbose_name='Произведение',
     )
 
-    class Meta(BaseContent.Meta):
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [
@@ -185,13 +165,13 @@ class Review(BaseContent):
         return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
 
 
-class Comment(BaseContent):
+class Comment(BaseContentModel):
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE,
         verbose_name='Отзыв',
     )
 
-    class Meta(BaseContent.Meta):
+    class Meta(BaseContentModel.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
 

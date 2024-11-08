@@ -26,7 +26,6 @@ from api.serializers import (
 )
 from api.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin)
-from api_yamdb.constants import RESERVED_NAME
 from reviews.models import Category, Genre, Review, Title, User
 
 
