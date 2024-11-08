@@ -2,6 +2,17 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
+
+from api.validators import validate_username
+from api_yamdb.constants import (
+    CONFIRMATION_CODE_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    SCORE,
+    SLUG_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
 
 from reviews.constants import (
     DESCRIPTION_LENGTH,
@@ -21,6 +32,7 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Администратор'
 
     bio = models.TextField('О себе', blank=True)
+    max_role_length = max(len(role.value) for role in Role)
     role = models.CharField(
         'Роль',
         max_length=max(len(role.value) for role in Role),
@@ -43,6 +55,7 @@ class User(AbstractUser):
     )
     confirmation_code = models.CharField(
         'Код подтверждения',
+
         max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         blank=True,
         null=True
@@ -114,6 +127,14 @@ class Title(models.Model):
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
         default_related_name = 'titles'
+
+    def clean(self):
+        current_year = timezone.now().year
+        if self.year > current_year:
+            raise ValidationError(
+                'Год выпуска ({value}) не может быть больше '
+                'текущего года ({current_year}).'
+            )
 
     def __str__(self):
         return self.name[:DESCRIPTION_LENGTH]

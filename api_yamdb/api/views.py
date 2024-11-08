@@ -26,6 +26,7 @@ from api.serializers import (
 )
 from api.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsAuthorOrModeratorOrAdmin)
+from api_yamdb.constants import RESERVED_NAME
 from reviews.models import Category, Genre, Review, Title, User
 
 
@@ -107,7 +108,6 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
-
         url_path=settings.RESERVED_NAME,
         serializer_class=CurrentUserSerializer
     )
