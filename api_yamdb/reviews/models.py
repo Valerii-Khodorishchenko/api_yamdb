@@ -124,6 +124,7 @@ class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
+
         verbose_name='Автор'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
@@ -162,7 +163,7 @@ class Review(BaseContentModel):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'
+        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
 
 
 class Comment(BaseContentModel):

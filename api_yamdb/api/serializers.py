@@ -90,6 +90,7 @@ class TokenObtainSerializer(serializers.Serializer):
         return validate_username(username)
 
 
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
