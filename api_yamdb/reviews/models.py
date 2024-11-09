@@ -7,7 +7,6 @@ from django.db import models
 from reviews.constants import (
     EMAIL_MAX_LENGTH,
     USERNAME_MAX_LENGTH,
-    DESCRIPTION_LENGTH,
     SLUG_MAX_LENGTH,
     NAME_MAX_LENGTH,
     SCORE
@@ -30,15 +29,15 @@ class User(AbstractUser):
     )
     email = models.EmailField(
         'Адрес электронной почты',
-        max_length=settings.EMAIL_MAX_LENGTH,
+        max_length=EMAIL_MAX_LENGTH,
         unique=True,
     )
     username = models.CharField(
-        'username',
+        'Пользователь',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите username пользователя.',
+            'Укажите логин пользователя.',
         ),
         validators=[validate_username],
     )
@@ -55,7 +54,7 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username[:DESCRIPTION_LENGTH]
+        return self.username
 
     @property
     def is_admin(self):
@@ -69,10 +68,10 @@ class User(AbstractUser):
 
 
 class BaseNameSlugModel(models.Model):
-    name = models.CharField('Название', max_length=settings.NAME_MAX_LENGTH)
+    name = models.CharField('Название', max_length=NAME_MAX_LENGTH)
     slug = models.SlugField(
         'Идентификатор',
-        max_length=settings.SLUG_MAX_LENGTH,
+        max_length=SLUG_MAX_LENGTH,
         unique=True
     )
 
@@ -80,7 +79,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:DESCRIPTION_LENGTH]
+        return self.name
 
 
 class Category(BaseNameSlugModel):
@@ -117,7 +116,7 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name[:DESCRIPTION_LENGTH]
+        return self.name
 
 
 class BaseContentModel(models.Model):
@@ -134,8 +133,7 @@ class BaseContentModel(models.Model):
         default_related_name = '%(class)ss'
 
     def __str__(self):
-        return (f'{self.__class__.__name__}'
-                f' от {self.author}')[:DESCRIPTION_LENGTH]
+        return f'{self.__class__.__name__} от {self.author}'
 
 
 class Review(BaseContentModel):
@@ -143,10 +141,10 @@ class Review(BaseContentModel):
         'Рейтинг',
         validators=[
             MinValueValidator(
-                settings.SCORE['min'], message=settings.SCORE['message']
+                SCORE['min'], message=SCORE['message']
             ),
             MaxValueValidator(
-                settings.SCORE['max'], message=settings.SCORE['message']
+                SCORE['max'], message=SCORE['message']
             )
         ]
     )
@@ -166,7 +164,7 @@ class Review(BaseContentModel):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
+        return f'Отзыв от {self.author} на {self.title}'
 
 
 class Comment(BaseContentModel):
@@ -180,5 +178,4 @@ class Comment(BaseContentModel):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return (f'{self.author} '
-                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]
+        return f'{self.author} прокомментировал {self.review}'
