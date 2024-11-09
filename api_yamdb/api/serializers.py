@@ -2,7 +2,6 @@ from django.conf import settings
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueValidator
 
 from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User

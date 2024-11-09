@@ -55,7 +55,7 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username
+        return self.username[:DESCRIPTION_LENGTH]
 
     @property
     def is_admin(self):
@@ -80,7 +80,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class Category(BaseNameSlugModel):
@@ -117,14 +117,14 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name
+        return self.name[:DESCRIPTION_LENGTH]
 
 
 class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор', related_name='%(class)s_author'
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
@@ -140,7 +140,7 @@ class BaseContentModel(models.Model):
 
 class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
-        'Рейтинг',
+        'Оценка',
         validators=[
             MinValueValidator(SCORE['min'], message=SCORE['message']),
             MaxValueValidator(SCORE['max'], message=SCORE['message'])

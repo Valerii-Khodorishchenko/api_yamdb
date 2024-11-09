@@ -108,13 +108,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def user_profile(self, request):
         if request.method == 'GET':
             return Response(CurrentUserSerializer(request.user).data)
-        elif request.method == 'PATCH':
-            serializer = CurrentUserSerializer(
-                request.user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+        serializer = CurrentUserSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class ListCreateDestroyViewSet(
