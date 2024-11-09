@@ -123,11 +123,12 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
 
-class CategoryGenreMixin(
+class ListCreateDestroyViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
+
 ):
     lookup_field = 'slug'
     filter_backends = (filters.SearchFilter,)
@@ -135,12 +136,12 @@ class CategoryGenreMixin(
     permission_classes = (IsAdminOrReadOnly,)
 
 
-class CategoryViewSet(CategoryGenreMixin):
+class CategoryViewSet(ListCreateDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(CategoryGenreMixin):
+class GenreViewSet(ListCreateDestroyViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
