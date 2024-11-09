@@ -33,11 +33,11 @@ class User(AbstractUser):
         unique=True,
     )
     username = models.CharField(
-        'username',
+        'Пользователь',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите username пользователя.',
+            'Укажите пользователя.',
         ),
         validators=[validate_username],
     )
@@ -55,7 +55,7 @@ class User(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username[:DESCRIPTION_LENGTH]
+        return self.username
 
     @property
     def is_admin(self):
@@ -80,7 +80,7 @@ class BaseNameSlugModel(models.Model):
         abstract = True
 
     def __str__(self):
-        return self.name[:DESCRIPTION_LENGTH]
+        return self.name
 
 
 class Category(BaseNameSlugModel):
@@ -117,7 +117,7 @@ class Title(models.Model):
         default_related_name = 'titles'
 
     def __str__(self):
-        return self.name[:DESCRIPTION_LENGTH]
+        return self.name
 
 
 class BaseContentModel(models.Model):
@@ -135,7 +135,7 @@ class BaseContentModel(models.Model):
 
     def __str__(self):
         return (f'{self.__class__.__name__}'
-                f' от {self.author}')[:DESCRIPTION_LENGTH]
+                f' от {self.author}')
 
 
 class Review(BaseContentModel):
@@ -162,7 +162,7 @@ class Review(BaseContentModel):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
+        return f'Отзыв от {self.author} на {self.title}'
 
 
 class Comment(BaseContentModel):
@@ -177,4 +177,4 @@ class Comment(BaseContentModel):
 
     def __str__(self):
         return (f'{self.author} '
-                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]
+                f'прокомментировал {self.review}')
