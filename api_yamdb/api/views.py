@@ -61,7 +61,8 @@ def signup(request):
             defaults={'email': email}
         )
     except IntegrityError:
-        if User.objects.filter(username=serializer.validated_data['username']).exists():
+        if User.objects.filter(
+                username=serializer.validated_data['username']).exists():
             raise ValidationError(
                 {'username': 'Пользователь с таким именем уже существует.'}
             )
