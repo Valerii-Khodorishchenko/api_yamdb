@@ -54,10 +54,11 @@ def get_random_code():
 def signup(request):
     serializer = UserSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data['email']
     try:
         user, created = User.objects.get_or_create(
             username=serializer.validated_data['username'],
-            email=serializer.validated_data['email']
+            defaults={'email': email}
         )
     except IntegrityError:
         if User.objects.filter(username=serializer.validated_data['username']).exists():
