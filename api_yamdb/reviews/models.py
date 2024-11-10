@@ -45,10 +45,8 @@ class User(AbstractUser):
     )
     confirmation_code = models.CharField(
         'Код подтверждения',
-
+        default=settings.DEFAULT_CONFIRMATION_CODE,
         max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
-        blank=True,
-        null=True
     )
 
     class Meta:

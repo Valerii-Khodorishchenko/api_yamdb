@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
+from django.urls import reverse
 from django_filters import rest_framework
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -59,16 +60,18 @@ def signup(request):
             username=serializer.validated_data['username'],
             defaults={'email': email}
         )
-        if not created and user.email != email:
-            raise ValidationError({'email': 'Email не совпадает.'})
     except IntegrityError:
+        if User.objects.filter(username=serializer.validated_data['username']).exists():
+            raise ValidationError(
+                {'username': 'Пользователь с таким именем уже существует.'}
+            )
         raise ValidationError(
-            {'email': 'Пользователь с таким email уже зарегистрирован.'})
-    else:
-        user.confirmation_code = get_random_code()
-        user.save()
-        send_confirmation_code(user, user.confirmation_code)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            {'email': 'Пользователь с таким email уже существует.'}
+        )
+    user.confirmation_code = get_random_code()
+    user.save()
+    send_confirmation_code(user, user.confirmation_code)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -79,13 +82,19 @@ def token_obtain(request):
     confirmation_code = serializer.validated_data['confirmation_code']
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
-    if user.confirmation_code != confirmation_code:
-        user.confirmation_code = ''
-        user.save()
+    check_confirmation_code = user.confirmation_code
+    user.confirmation_code = settings.DEFAULT_CONFIRMATION_CODE
+    user.save()
+    if check_confirmation_code == settings.DEFAULT_CONFIRMATION_CODE:
+        raise ValidationError('Код подтверждения уже использован, или запрос '
+                              'на его получение не был отправлен. Отправьте '
+                              f'запрос на {reverse("signup")}.')
+    if (check_confirmation_code != confirmation_code
+            or not confirmation_code.isdigit()):
         raise ValidationError(
             {'confirmation_code': (
                 'Неверный код подтверждения. Для получения нового кода '
-                'повторите запрос на /api/v1/auth/signup/')})
+                f'повторите запрос на {reverse("signup")}.')})
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK
