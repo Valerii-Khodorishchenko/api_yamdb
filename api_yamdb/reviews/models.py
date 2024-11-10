@@ -33,7 +33,7 @@ class User(AbstractUser):
         unique=True
     )
     username = models.CharField(
-        'Никнейм',
+        'Псевдоним',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
