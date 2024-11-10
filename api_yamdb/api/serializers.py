@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
