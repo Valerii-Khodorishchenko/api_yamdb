@@ -53,11 +53,10 @@ def get_random_code():
 def signup(request):
     serializer = UserSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    username = serializer.validated_data['username']
     email = serializer.validated_data['email']
     try:
         user, created = User.objects.get_or_create(
-            username=username,
+            username=serializer.validated_data['username'],
             defaults={'email': email}
         )
         if not created and user.email != email:
@@ -66,9 +65,8 @@ def signup(request):
         raise ValidationError(
             {'email': 'Пользователь с таким email уже зарегистрирован.'})
     else:
-        if not user.confirmation_code:
-            user.confirmation_code = get_random_code()
-            user.save()
+        user.confirmation_code = get_random_code()
+        user.save()
         send_confirmation_code(user, user.confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -82,10 +80,12 @@ def token_obtain(request):
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
     if user.confirmation_code != confirmation_code:
+        user.confirmation_code = ''
+        user.save()
         raise ValidationError(
-            {'confirmation_code': 'Неверный код подтверждения.'})
-    user.confirmation_code = ''
-    user.save()
+            {'confirmation_code': (
+                'Неверный код подтверждения. Для получения нового кода '
+                'повторите запрос на /api/v1/auth/signup/')})
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK

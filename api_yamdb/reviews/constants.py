@@ -3,9 +3,7 @@ NAME_MAX_LENGTH = 256
 SLUG_MAX_LENGTH = 50
 USERNAME_MAX_LENGTH = 150
 DESCRIPTION_LENGTH = 50
-
-SCORE = {
-    'min': 1,
-    'max': 10,
-    'message': 'Оценка должна быть в диапазоне от 1 до 10.'
-}
+MIN_SCORE = 1
+MAX_SCORE = 10
+SCORE_ERROR_MESSAGE = (
+    f'Оценка должна быть в диапазоне от {MIN_SCORE} до {MAX_SCORE}.')
