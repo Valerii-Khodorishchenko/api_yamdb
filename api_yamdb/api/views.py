@@ -49,27 +49,32 @@ def get_random_code():
     ))
 
 
+# def get_invalid_confirmation_code():
+#     return '0' * settings.CONFIRMATION_CODE_MAX_LENGTH
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
     serializer = UserSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    email = serializer.validated_data['email']
     try:
         user, created = User.objects.get_or_create(
             username=serializer.validated_data['username'],
-            defaults={'email': email}
+            email=serializer.validated_data['email']
         )
-        if not created and user.email != email:
-            raise ValidationError({'email': 'Email не совпадает.'})
     except IntegrityError:
+        if User.objects.filter(username=serializer.validated_data['username']).exists():
+            raise ValidationError(
+                {'username': 'Пользователь с таким именем уже существует.'}
+            )
         raise ValidationError(
-            {'email': 'Пользователь с таким email уже зарегистрирован.'})
-    else:
-        user.confirmation_code = get_random_code()
-        user.save()
-        send_confirmation_code(user, user.confirmation_code)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            {'email': 'Пользователь с таким email уже существует.'}
+        )
+    user.confirmation_code = get_random_code()
+    user.save()
+    send_confirmation_code(user, user.confirmation_code)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -81,12 +86,13 @@ def token_obtain(request):
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
     if user.confirmation_code != confirmation_code:
-        user.confirmation_code = 'fjvpso'
-        user.save()
+        signup_url = reverse('signup')
         raise ValidationError(
             {'confirmation_code': (
                 'Неверный код подтверждения. Для получения нового кода '
-                f'повторите запрос на {reverse("signup")}')})
+                f'повторите запрос на {signup_url}.')})
+    user.confirmation_code = None
+    user.save()
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK
