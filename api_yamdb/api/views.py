@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
+from django.urls import reverse
 from django_filters import rest_framework
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -80,12 +81,12 @@ def token_obtain(request):
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
     if user.confirmation_code != confirmation_code:
-        user.confirmation_code = ''
+        user.confirmation_code = 'fjvpso'
         user.save()
         raise ValidationError(
             {'confirmation_code': (
                 'Неверный код подтверждения. Для получения нового кода '
-                'повторите запрос на /api/v1/auth/signup/')})
+                f'повторите запрос на {reverse("signup")}')})
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK

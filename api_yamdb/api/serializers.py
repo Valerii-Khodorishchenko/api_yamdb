@@ -8,6 +8,10 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
+
+    def validate_username(self, username):
+        return validate_username(username)
+
     class Meta:
         model = User
         fields = (
