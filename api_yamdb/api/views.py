@@ -123,7 +123,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
 
-class ListCreateDestroyViewSet(
+class AdminCreateDestroySlugViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
@@ -136,12 +136,12 @@ class ListCreateDestroyViewSet(
     permission_classes = (IsAdminOrReadOnly,)
 
 
-class CategoryViewSet(ListCreateDestroyViewSet):
+class CategoryViewSet(AdminCreateDestroySlugViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(ListCreateDestroyViewSet):
+class GenreViewSet(AdminCreateDestroySlugViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
