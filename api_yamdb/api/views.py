@@ -66,8 +66,9 @@ def signup(request):
         raise ValidationError(
             {'email': 'Пользователь с таким email уже зарегистрирован.'})
     else:
-        user.confirmation_code = get_random_code()
-        user.save()
+        if not user.confirmation_code:
+            user.confirmation_code = get_random_code()
+            user.save()
         send_confirmation_code(user, user.confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
