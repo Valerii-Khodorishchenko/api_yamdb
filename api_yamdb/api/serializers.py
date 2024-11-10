@@ -9,14 +9,8 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        required=True,
-    )
-    email = serializers.EmailField(
-        max_length=EMAIL_MAX_LENGTH,
-        required=True,
-    )
+    def validate_username(self, username):
+        return validate_username(username)
 
     def validate(self, data):
         username = data.get(
@@ -109,7 +103,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
+        fields = read_only_fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
         read_only_fields = (
@@ -157,13 +151,15 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']).method == 'POST':
-            if Review.objects.filter(
+        if (
+            (request := self.context['request']).method == 'POST'
+            and Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()
-            ).exists():
-                raise ValidationError(
-                    'Вы уже оставляли отзыв к этому произведению.')
+            ).exists()
+        ):
+            raise ValidationError(
+                'Вы уже оставляли отзыв к этому произведению.')
         return data
 
 

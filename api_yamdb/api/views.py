@@ -53,22 +53,22 @@ def get_random_code():
 def signup(request):
     serializer = UserSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data['email']
     try:
         user, created = User.objects.get_or_create(
             username=serializer.validated_data['username'],
-            email=serializer.validated_data['email']
+            defaults={'email': email}
         )
-        confirmation_code = get_random_code()
+        if not created and user.email != email:
+            raise ValidationError({'email': 'Email не совпадает.'})
+    except IntegrityError:
+        raise ValidationError(
+            {'email': 'Пользователь с таким email уже зарегистрирован.'})
+    else:
         user.confirmation_code = get_random_code()
         user.save()
-        send_confirmation_code(user, confirmation_code)
+        send_confirmation_code(user, user.confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except IntegrityError as e:
-        if 'username' in str(e).lower():
-            raise ValidationError(
-                {'email': ['Пользователь с таким email уже существует.']})
-        elif 'email' in str(e).lower():
-            raise ValidationError({'username': ['Это имя уже занято.']})
 
 
 @api_view(['POST'])
@@ -80,10 +80,12 @@ def token_obtain(request):
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
     if user.confirmation_code != confirmation_code:
+        user.confirmation_code = ''
+        user.save()
         raise ValidationError(
-            {'confirmation_code': ['Неверный код подтверждения.']})
-    user.confirmation_code = ''
-    user.save()
+            {'confirmation_code': (
+                'Неверный код подтверждения. Для получения нового кода '
+                'повторите запрос на /api/v1/auth/signup/')})
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK
@@ -107,7 +109,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def user_profile(self, request):
         if request.method == 'GET':
-            return Response(CurrentUserSerializer(request.user).data)
+            return Response(UserSerializer(request.user).data)
         serializer = CurrentUserSerializer(
             request.user, data=request.data, partial=True
         )
@@ -116,7 +118,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ListCreateDestroyViewSet(
+class AdminCreateDestroySlugViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
@@ -129,12 +131,12 @@ class ListCreateDestroyViewSet(
     permission_classes = (IsAdminOrReadOnly,)
 
 
-class CategoryViewSet(ListCreateDestroyViewSet):
+class CategoryViewSet(AdminCreateDestroySlugViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(ListCreateDestroyViewSet):
+class GenreViewSet(AdminCreateDestroySlugViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 

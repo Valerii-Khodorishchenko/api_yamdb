@@ -4,12 +4,14 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from reviews.constants import (
-    EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
     DESCRIPTION_LENGTH,
-    SLUG_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    MAX_SCORE,
+    MIN_SCORE,
     NAME_MAX_LENGTH,
-    SCORE
+    SLUG_MAX_LENGTH,
+    SCORE_ERROR_MESSAGE,
+    USERNAME_MAX_LENGTH,
 )
 from reviews.validators import validate_username, validate_year
 
@@ -30,10 +32,10 @@ class User(AbstractUser):
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=EMAIL_MAX_LENGTH,
-        unique=True,
+        unique=True
     )
     username = models.CharField(
-        'Пользователь',
+        'Псевдоним',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
@@ -143,8 +145,8 @@ class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
         'Оценка',
         validators=[
-            MinValueValidator(SCORE['min'], message=SCORE['message']),
-            MaxValueValidator(SCORE['max'], message=SCORE['message'])
+            MinValueValidator(MIN_SCORE, message=SCORE_ERROR_MESSAGE),
+            MaxValueValidator(MAX_SCORE, message=SCORE_ERROR_MESSAGE)
         ]
     )
     title = models.ForeignKey(
@@ -163,7 +165,7 @@ class Review(BaseContentModel):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
+        return f'Отзыв от {self.author} на {self.title}'
 
 
 class Comment(BaseContentModel):
