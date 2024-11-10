@@ -49,10 +49,6 @@ def get_random_code():
     ))
 
 
-def get_invalid_confirmation_code():
-    return '0' * settings.CONFIRMATION_CODE_MAX_LENGTH
-
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
