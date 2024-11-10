@@ -30,14 +30,14 @@ class User(AbstractUser):
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=EMAIL_MAX_LENGTH,
-        unique=True,
+        unique=True
     )
     username = models.CharField(
-        'username',
+        'Никнейм',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите username пользователя.',
+            'Укажите пользователя.',
         ),
         validators=[validate_username],
     )
@@ -124,7 +124,8 @@ class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор', related_name='%(class)s_author'
+
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
@@ -135,12 +136,12 @@ class BaseContentModel(models.Model):
 
     def __str__(self):
         return (f'{self.__class__.__name__}'
-                f' от {self.author}')[:DESCRIPTION_LENGTH]
+                f' от {self.author}')
 
 
 class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
-        'Рейтинг',
+        'Оценка',
         validators=[
             MinValueValidator(SCORE['min'], message=SCORE['message']),
             MaxValueValidator(SCORE['max'], message=SCORE['message'])
@@ -177,4 +178,4 @@ class Comment(BaseContentModel):
 
     def __str__(self):
         return (f'{self.author} '
-                f'прокомментировал {self.review}')[:DESCRIPTION_LENGTH]
+                f'прокомментировал {self.review}')

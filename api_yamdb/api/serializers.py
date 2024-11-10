@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
@@ -9,27 +10,17 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        validators=[
-            validate_username,
-            UniqueValidator(
-                queryset=User.objects.all(),
-                message='Пользователь с таким именем уже существует.'
-            )
-        ],
-        required=True,
-    )
-    email = serializers.EmailField(
-        max_length=EMAIL_MAX_LENGTH,
-        validators=[
-            UniqueValidator(
-                queryset=User.objects.all(),
-                message='Пользователь с таким email уже существует.'
-            )
-        ],
-        required=True,
-    )
+    # username = serializers.CharField(
+    #     max_length=USERNAME_MAX_LENGTH,
+    #     required=True
+    # )
+    # email = serializers.EmailField(
+    #     max_length=EMAIL_MAX_LENGTH,
+    #     required=True
+    # )
+
+    def validate_username(self, username):
+        return validate_username(username)
 
     class Meta:
         model = User
@@ -42,7 +33,6 @@ class UserSerializer(serializers.ModelSerializer):
             'role',
         )
 
-
 class CurrentUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         read_only_fields = ('role',)
@@ -52,12 +42,14 @@ class UserSignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
         required=True,
-        validators=[validate_username],
     )
     email = serializers.EmailField(
         max_length=EMAIL_MAX_LENGTH,
         required=True,
     )
+
+    def validate_username(self, username):
+        return validate_username(username)
 
 
 class TokenObtainSerializer(serializers.Serializer):
@@ -69,6 +61,9 @@ class TokenObtainSerializer(serializers.Serializer):
         max_length=settings.CONFIRMATION_CODE_MAX_LENGTH,
         required=True,
     )
+
+    def validate_username(self, username):
+        return validate_username(username)
 
 
 class CategorySerializer(serializers.ModelSerializer):

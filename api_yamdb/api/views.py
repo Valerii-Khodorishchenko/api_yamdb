@@ -4,9 +4,11 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from django.db.utils import IntegrityError
 from django_filters import rest_framework
-from rest_framework import filters, mixins, status, views, viewsets
-from rest_framework.decorators import action
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
@@ -40,33 +42,30 @@ def send_confirmation_code(user, confirmation_code):
 
 
 def get_random_code():
-    length = settings.CONFIRMATION_CODE_MAX_LENGTH
-    allowed_chars = settings.CONFIRMATION_CODE_CHARS
-    return ''.join(random.choices(allowed_chars, k=length))
+    return ''.join(random.choices(
+        settings.CONFIRMATION_CODE_CHARS,
+        k=settings.CONFIRMATION_CODE_MAX_LENGTH
+    ))
 
 
-class SignUpView(views.APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = UserSignUpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
-        user = User.objects.filter(username=username).first()
-        if user:
-            if user.email != email:
-                return Response(
-                    {'email': ['Email не совпадает.']},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        else:
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {'email': ['Пользователь с таким email уже существует.']},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            user = User.objects.create_user(username=username, email=email)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup(request):
+    serializer = UserSignUpSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
+    try:
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={'email': email}
+        )
+        if not created and user.email != email:
+            raise ValidationError({'email': 'Email не совпадает.'})   
+    except IntegrityError:
+        raise ValidationError(
+            {'email': 'Пользователь с таким email уже зарегистрирован.'})
+    else:
         confirmation_code = get_random_code()
         user.confirmation_code = confirmation_code
         user.save()
@@ -74,24 +73,23 @@ class SignUpView(views.APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class TokenView(views.APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        serializer = TokenObtainSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        confirmation_code = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(
-            User, username=serializer.validated_data['username'])
-        if user.confirmation_code != confirmation_code:
-            return Response(
-                {'confirmation_code': ['Неверный код подтверждения.']},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return Response(
-            {'token': str(AccessToken.for_user(user))},
-            status=status.HTTP_200_OK
-        )
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def token_obtain(request):
+    serializer = TokenObtainSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    confirmation_code = serializer.validated_data['confirmation_code']
+    user = get_object_or_404(
+        User, username=serializer.validated_data['username'])
+    if user.confirmation_code != confirmation_code:
+        raise ValidationError(
+            {'confirmation_code': 'Неверный код подтверждения.'})
+    user.confirmation_code = ''
+    user.save()
+    return Response(
+        {'token': str(AccessToken.for_user(user))},
+        status=status.HTTP_200_OK
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -108,19 +106,16 @@ class UserViewSet(viewsets.ModelViewSet):
         methods=('get', 'patch'),
         permission_classes=(IsAuthenticated,),
         url_path=settings.RESERVED_NAME,
-        serializer_class=CurrentUserSerializer
     )
-    def get_current_user(self, request):
+    def user_profile(self, request):
         if request.method == 'GET':
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
-        elif request.method == 'PATCH':
-            serializer = self.get_serializer(
-                request.user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+            return Response(UserSerializer(request.user).data)
+        serializer = CurrentUserSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class AdminCreateDestroySlugViewSet(
