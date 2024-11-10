@@ -11,11 +11,8 @@ def validate_username(username):
             f'Использование "{settings.RESERVED_NAME}" '
             'в качестве имени пользователя запрещено.'
         )
-    if invalid_chars := re.sub(r'[\w.@+-]', '', username):
-        raise ValidationError(
-            'Имя пользователя содержит недопустимые символы:'
-            f' {", ".join(set(invalid_chars))}.'
-        )
+    if not re.match(r'^[\w.@+-]+\Z', username):
+        raise ValidationError('Недопустимые символы в имени пользователя.')
     return username
 
 

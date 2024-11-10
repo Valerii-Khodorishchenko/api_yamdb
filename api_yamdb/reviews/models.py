@@ -30,10 +30,10 @@ class User(AbstractUser):
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=EMAIL_MAX_LENGTH,
-        unique=True,
+        unique=True
     )
     username = models.CharField(
-        'Пользователь',
+        'Никнейм',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(

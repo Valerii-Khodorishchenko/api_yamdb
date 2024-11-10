@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueValidator
 
 from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
@@ -9,41 +10,17 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        required=True,
-    )
-    email = serializers.EmailField(
-        max_length=EMAIL_MAX_LENGTH,
-        required=True,
-    )
+    # username = serializers.CharField(
+    #     max_length=USERNAME_MAX_LENGTH,
+    #     required=True
+    # )
+    # email = serializers.EmailField(
+    #     max_length=EMAIL_MAX_LENGTH,
+    #     required=True
+    # )
 
-    def validate(self, data):
-        username = data.get(
-            'username',
-            self.instance.username if self.instance else None
-        )
-        email = data.get(
-            'email',
-            self.instance.email if self.instance else None
-        )
-        user_qs = User.objects.filter(
-            Q(username=username) | Q(email=email)
-        )
-        if self.instance:
-            user_qs = user_qs.exclude(pk=self.instance.pk)
-        errors = {}
-        for user in user_qs:
-            if user.username == username:
-                errors['username'] = (
-                    'Пользователь с таким именем уже существует.')
-            if user.email == email:
-                errors['email'] = 'Пользователь с таким email уже существует.'
-        if errors:
-            raise serializers.ValidationError(errors)
-        validate_username(username)
-        data['username'] = username
-        return data
+    def validate_username(self, username):
+        return validate_username(username)
 
     class Meta:
         model = User
@@ -55,7 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
-
 
 class CurrentUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
@@ -112,9 +88,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
-        read_only_fields = (
-            'id', 'name', 'year', 'description', 'rating', 'genre', 'category'
-        )
+        read_only_fields = fields
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):

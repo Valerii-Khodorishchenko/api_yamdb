@@ -53,22 +53,24 @@ def get_random_code():
 def signup(request):
     serializer = UserSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
     try:
         user, created = User.objects.get_or_create(
-            username=serializer.validated_data['username'],
-            email=serializer.validated_data['email']
+            username=username,
+            defaults={'email': email}
         )
+        if not created and user.email != email:
+            raise ValidationError({'email': 'Email не совпадает.'})   
+    except IntegrityError:
+        raise ValidationError(
+            {'email': 'Пользователь с таким email уже зарегистрирован.'})
+    else:
         confirmation_code = get_random_code()
-        user.confirmation_code = get_random_code()
+        user.confirmation_code = confirmation_code
         user.save()
         send_confirmation_code(user, confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except IntegrityError as e:
-        if 'username' in str(e).lower():
-            raise ValidationError(
-                {'email': ['Пользователь с таким email уже существует.']})
-        elif 'email' in str(e).lower():
-            raise ValidationError({'username': ['Это имя уже занято.']})
 
 
 @api_view(['POST'])
@@ -81,7 +83,7 @@ def token_obtain(request):
         User, username=serializer.validated_data['username'])
     if user.confirmation_code != confirmation_code:
         raise ValidationError(
-            {'confirmation_code': ['Неверный код подтверждения.']})
+            {'confirmation_code': 'Неверный код подтверждения.'})
     user.confirmation_code = ''
     user.save()
     return Response(
@@ -107,7 +109,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def user_profile(self, request):
         if request.method == 'GET':
-            return Response(CurrentUserSerializer(request.user).data)
+            return Response(UserSerializer(request.user).data)
         serializer = CurrentUserSerializer(
             request.user, data=request.data, partial=True
         )
@@ -116,7 +118,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ListCreateDestroyViewSet(
+class CreateListDestroyViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
@@ -129,12 +131,12 @@ class ListCreateDestroyViewSet(
     permission_classes = (IsAdminOrReadOnly,)
 
 
-class CategoryViewSet(ListCreateDestroyViewSet):
+class CategoryViewSet(CreateListDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(ListCreateDestroyViewSet):
+class GenreViewSet(CreateListDestroyViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
