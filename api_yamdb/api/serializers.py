@@ -1,8 +1,6 @@
 from django.conf import settings
-from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueValidator
 
 from reviews.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
@@ -10,14 +8,6 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # username = serializers.CharField(
-    #     max_length=USERNAME_MAX_LENGTH,
-    #     required=True
-    # )
-    # email = serializers.EmailField(
-    #     max_length=EMAIL_MAX_LENGTH,
-    #     required=True
-    # )
 
     def validate_username(self, username):
         return validate_username(username)
@@ -32,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role',
         )
+
 
 class CurrentUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
@@ -130,13 +121,15 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']).method == 'POST':
-            if Review.objects.filter(
+        if (
+            (request := self.context['request']).method == 'POST'
+            and Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()
-            ).exists():
-                raise ValidationError(
-                    'Вы уже оставляли отзыв к этому произведению.')
+            ).exists()
+        ):
+            raise ValidationError(
+                'Вы уже оставляли отзыв к этому произведению.')
         return data
 
 

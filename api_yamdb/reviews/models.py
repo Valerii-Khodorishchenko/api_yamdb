@@ -163,7 +163,7 @@ class Review(BaseContentModel):
         ]
 
     def __str__(self):
-        return f'Отзыв от {self.author} на {self.title}'[:DESCRIPTION_LENGTH]
+        return f'Отзыв от {self.author} на {self.title}'
 
 
 class Comment(BaseContentModel):

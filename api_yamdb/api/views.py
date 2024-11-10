@@ -61,7 +61,7 @@ def signup(request):
             defaults={'email': email}
         )
         if not created and user.email != email:
-            raise ValidationError({'email': 'Email не совпадает.'})   
+            raise ValidationError({'email': 'Email не совпадает.'})
     except IntegrityError:
         raise ValidationError(
             {'email': 'Пользователь с таким email уже зарегистрирован.'})
