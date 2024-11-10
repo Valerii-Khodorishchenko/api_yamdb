@@ -11,17 +11,13 @@ def validate_username(username):
             f'Использование "{settings.RESERVED_NAME}" '
             'в качестве имени пользователя запрещено.'
         )
-    regex = re.compile(r'^[\w.@+-]+$')
-    if not re.match(regex, username):
-        raise ValidationError(
-            'Имя пользователя содержит недопустимые символы.'
-        )
+    if not re.match(r'^[\w.@+-]+\Z', username):
+        raise ValidationError('Недопустимые символы в имени пользователя.')
     return username
 
 
 def validate_year(year):
-    current_year = datetime.date.today().year
-    if year > current_year:
+    if year > (current_year := datetime.date.today().year):
         raise ValidationError(
             f'Год выпуска ({year}) не может быть больше '
             f'текущего года ({current_year}).'

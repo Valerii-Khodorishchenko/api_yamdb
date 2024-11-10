@@ -5,11 +5,14 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from reviews.constants import (
+    DESCRIPTION_LENGTH,
     EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-    SLUG_MAX_LENGTH,
+    MAX_SCORE,
+    MIN_SCORE,
     NAME_MAX_LENGTH,
-    SCORE
+    SLUG_MAX_LENGTH,
+    SCORE_ERROR_MESSAGE,
+    USERNAME_MAX_LENGTH,
 )
 from reviews.validators import validate_username, validate_year
 
@@ -30,14 +33,14 @@ class User(AbstractUser):
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=EMAIL_MAX_LENGTH,
-        unique=True,
+        unique=True
     )
     username = models.CharField(
-        'Пользователь',
+        'Псевдоним',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         help_text=(
-            'Укажите логин пользователя.',
+            'Укажите пользователя.',
         ),
         validators=[validate_username],
     )
@@ -123,7 +126,8 @@ class BaseContentModel(models.Model):
     text = models.TextField('Текст')
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор', related_name='%(class)s_author'
+
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
 
@@ -133,19 +137,16 @@ class BaseContentModel(models.Model):
         default_related_name = '%(class)ss'
 
     def __str__(self):
-        return f'{self.__class__.__name__} от {self.author}'
+        return (f'{self.__class__.__name__}'
+                f' от {self.author}')
 
 
 class Review(BaseContentModel):
     score = models.PositiveSmallIntegerField(
-        'Рейтинг',
+        'Оценка',
         validators=[
-            MinValueValidator(
-                SCORE['min'], message=SCORE['message']
-            ),
-            MaxValueValidator(
-                SCORE['max'], message=SCORE['message']
-            )
+            MinValueValidator(MIN_SCORE, message=SCORE_ERROR_MESSAGE),
+            MaxValueValidator(MAX_SCORE, message=SCORE_ERROR_MESSAGE)
         ]
     )
     title = models.ForeignKey(
@@ -178,4 +179,5 @@ class Comment(BaseContentModel):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return f'{self.author} прокомментировал {self.review}'
+        return (f'{self.author} '
+                f'прокомментировал {self.review}')

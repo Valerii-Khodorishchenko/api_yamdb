@@ -9,44 +9,6 @@ from reviews.validators import validate_username, validate_year
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        required=True,
-    )
-    email = serializers.EmailField(
-        max_length=EMAIL_MAX_LENGTH,
-        required=True,
-
-    )
-
-    def validate(self, data):
-        username = data.get(
-            'username',
-            self.instance.username if self.instance else None
-        )
-        email = data.get(
-            'email',
-            self.instance.email if self.instance else None
-        )
-        user_qs = User.objects.filter(
-            Q(username=username) | Q(email=email)
-        )
-        if self.instance:
-            user_qs = user_qs.exclude(pk=self.instance.pk)
-        errors = {}
-        for user in user_qs:
-            if user.username == username:
-                errors['username'] = (
-                    'Пользователь с таким именем уже существует.')
-            if user.email == email:
-                errors['email'] = 'Пользователь с таким email уже существует.'
-        if errors:
-            raise serializers.ValidationError(errors)
-        validate_username(username)
-        data['username'] = username
-        return data
-
-
     class Meta:
         model = User
         fields = (
@@ -111,7 +73,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
+        fields = read_only_fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
 
@@ -156,13 +118,15 @@ class ReviewSerializer(BaseAuthorSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date')
 
     def validate(self, data):
-        if (request := self.context['request']).method == 'POST':
-            if Review.objects.filter(
+        if (
+            (request := self.context['request']).method == 'POST'
+            and Review.objects.filter(
                 author=request.user,
                 title=self.context['view'].get_title()
-            ).exists():
-                raise ValidationError(
-                    'Вы уже оставляли отзыв к этому произведению.')
+            ).exists()
+        ):
+            raise ValidationError(
+                'Вы уже оставляли отзыв к этому произведению.')
         return data
 
 
