@@ -49,8 +49,8 @@ def get_random_code():
     ))
 
 
-# def get_invalid_confirmation_code():
-#     return '0' * settings.CONFIRMATION_CODE_MAX_LENGTH
+def get_invalid_confirmation_code():
+    return '0' * settings.CONFIRMATION_CODE_MAX_LENGTH
 
 
 @api_view(['POST'])
@@ -85,14 +85,19 @@ def token_obtain(request):
     confirmation_code = serializer.validated_data['confirmation_code']
     user = get_object_or_404(
         User, username=serializer.validated_data['username'])
-    if user.confirmation_code != confirmation_code:
-        signup_url = reverse('signup')
+    check_confirmation_code = user.confirmation_code
+    user.confirmation_code = settings.DEFAULT_CONFIRMATION_CODE
+    user.save()
+    if check_confirmation_code == settings.DEFAULT_CONFIRMATION_CODE:
+        raise ValidationError('Код подтверждения уже использован, или запрос '
+                              'на его получение не был отправлен. Отправьте '
+                              f'запрос на {reverse("signup")}.')
+    if (check_confirmation_code != confirmation_code
+            or not confirmation_code.isdigit()):
         raise ValidationError(
             {'confirmation_code': (
                 'Неверный код подтверждения. Для получения нового кода '
-                f'повторите запрос на {signup_url}.')})
-    user.confirmation_code = None
-    user.save()
+                f'повторите запрос на {reverse("signup")}.')})
     return Response(
         {'token': str(AccessToken.for_user(user))},
         status=status.HTTP_200_OK
